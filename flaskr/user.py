@@ -9,13 +9,17 @@ def create_user(username, password):
         "insert into User (username, password) values (?, ?)",
         (username, generate_password_hash(password)),
     )
+    db.commit()
     return cursor.lastrowid  # returns the new id
 
 
-def create_branch(username, name, password):
-    db = get_db()
-    cursor = db.execute(
-        "insert into Branch (username, name, password) values (?, ?, ?)",
-        (username, name, generate_password_hash(password)),
+def get_user(username):
+    return (
+        get_db()
+        .execute("SELECT * FROM user WHERE username = ?", (username,))
+        .fetchone()
     )
-    return cursor.lastrowid  # returns the new id
+
+
+def get_user_by_id(user_id):
+    return get_db().execute("SELECT * FROM user WHERE id = ?", (user_id,)).fetchone()

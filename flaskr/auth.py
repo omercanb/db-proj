@@ -13,7 +13,8 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from flaskr.db import get_db
-from flaskr.user import create_branch, create_user
+from flaskr.stores import create_store, get_store, get_store_by_id
+from flaskr.user import create_user, get_user, get_user_by_id
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -49,7 +50,6 @@ def login():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-        db = get_db()
         error = None
 
         if not username:
@@ -57,9 +57,7 @@ def login():
         elif not password:
             error = "Password is required"
 
-        user = db.execute(
-            "SELECT * FROM user WHERE username = ?", (username,)
-        ).fetchone()
+        user = get_user(username)
 
         if user is None:
             error = "Incorrect username."
@@ -79,13 +77,72 @@ def login():
 @bp.before_app_request
 def load_logged_in_user():
     user_id = session.get("user_id")
+    store_id = session.get("store_id")
 
-    if user_id is None:
+    if user_id is None and store_id is None:
         g.user = None
+    elif user_id is not None:
+        g.user = get_user_by_id(user_id)
     else:
-        g.user = (
-            get_db().execute("SELECT * FROM user WHERE id = ?", (user_id,)).fetchone()
-        )
+        g.user = get_store_by_id(store_id)
+
+
+@bp.route("/registerstore", methods=("GET", "POST"))
+def registerstore():
+    if request.method == "POST":
+        username = request.form["username"]
+        store_name = request.form["store_name"]
+        password = request.form["password"]
+        db = get_db()
+        error = None
+
+        if not username:
+            error = "Username is required."
+        elif not store_name:
+            error = "Store name is required."
+        elif not password:
+            error = "Password is required."
+
+        if error is None:
+            try:
+                create_store(username, store_name, password)
+            except db.IntegrityError:
+                error = f"Store {username}/{store_name} is already registered."
+            else:
+                return redirect(url_for("auth.loginstore"))
+
+        flash(error)
+
+    return render_template("auth/registerstore.html")
+
+
+@bp.route("/loginstore", methods=("GET", "POST"))
+def loginstore():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        error = None
+
+        if not username:
+            error = "Username is required"
+        elif not password:
+            error = "Password is required"
+
+        store = get_store(username)
+
+        if store is None:
+            error = "Incorrect username."
+        elif not check_password_hash(store["password"], password):
+            error = "Incorrect password."
+
+        if error is None:
+            session.clear()
+            session["store_id"] = store["id"]
+            return redirect(url_for("index"))
+
+        flash(error)
+
+    return render_template("auth/loginstore.html")
 
 
 @bp.route("/logout")
