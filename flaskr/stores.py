@@ -1,5 +1,4 @@
 import functools
-import random
 from datetime import date
 
 from flask import (
@@ -17,15 +16,21 @@ from werkzeug.security import generate_password_hash
 from flaskr import game
 from flaskr.db import get_db
 from flaskr.game import (
-    create_game,
     create_game_copy,
     get_available_games,
     get_available_games_with_counts,
     get_game_copies,
     get_unavailable_games,
 )
-from flaskr.session import create_session, get_available_tables, get_unavailable_tables
-from flaskr.user import create_user
+from flaskr.session import (
+    create_session,
+    delete_session,
+    get_available_tables,
+    get_session,
+    get_session_games,
+    get_unavailable_tables,
+    get_upcoming_sessions_with_user_by_store,
+)
 
 bp = Blueprint("stores", __name__)
 
@@ -69,12 +74,133 @@ def stores():
 @bp.route("/mystore")
 @store_login_required
 def my_store():
-    tables = get_tables(g.store["id"])
-    print(tables)
-    game_copies = get_game_copies(g.store["id"])
+    store_id = g.store["id"]
+    tables = get_tables(store_id)
+    games = get_available_games_with_counts(store_id)
+    all_games = game.get_games()
+    today = str(date.today())
+    upcoming_sessions_raw = get_upcoming_sessions_with_user_by_store(store_id, today)
+
+    # Convert to dicts and attach games
+    upcoming_sessions = []
+    for sess in upcoming_sessions_raw:
+        sess_dict = dict(sess)
+        sess_dict["games"] = get_session_games(sess["id"])
+        upcoming_sessions.append(sess_dict)
+
     return render_template(
-        "stores/my_store.html", tables=tables, game_copies=game_copies
+        "stores/my_store.html",
+        tables=tables,
+        games=games,
+        all_games=all_games,
+        upcoming_sessions=upcoming_sessions,
     )
+
+
+@bp.route("/mystore/table/add", methods=("POST",))
+@store_login_required
+def add_table():
+    capacity = request.form.get("capacity", type=int)
+    if capacity is None or capacity <= 0:
+        flash("Capacity must be a positive number.")
+        return redirect(url_for("stores.my_store"))
+
+    try:
+        create_table(g.store["id"], capacity)
+        flash("Table added successfully.")
+    except Exception as e:
+        flash(f"Error adding table: {str(e)}")
+
+    return redirect(url_for("stores.my_store"))
+
+
+@bp.route("/mystore/table/<int:table_num>/update", methods=("POST",))
+@store_login_required
+def update_table_route(table_num):
+    capacity = request.form.get("capacity", type=int)
+    if capacity is None or capacity <= 0:
+        flash("Capacity must be a positive number.")
+        return redirect(url_for("stores.my_store"))
+
+    try:
+        update_table(g.store["id"], table_num, capacity)
+        flash("Table updated successfully.")
+    except Exception as e:
+        flash(f"Error updating table: {str(e)}")
+
+    return redirect(url_for("stores.my_store"))
+
+
+@bp.route("/mystore/table/<int:table_num>/delete", methods=("POST",))
+@store_login_required
+def delete_table_route(table_num):
+    try:
+        delete_table(g.store["id"], table_num)
+        flash("Table deleted successfully.")
+    except Exception as e:
+        flash(f"Error deleting table: {str(e)}")
+
+    return redirect(url_for("stores.my_store"))
+
+
+@bp.route("/mystore/game/add", methods=("POST",))
+@store_login_required
+def add_game_copy():
+    game_id = request.form.get("game_id", type=int)
+    if game_id is None:
+        flash("Please select a game.")
+        return redirect(url_for("stores.my_store"))
+
+    try:
+        create_game_copy(game_id, g.store["id"])
+        flash("Game copy added successfully.")
+    except Exception as e:
+        flash(f"Error adding game copy: {str(e)}")
+
+    return redirect(url_for("stores.my_store"))
+
+
+@bp.route("/mystore/game/<int:game_id>/remove", methods=("POST",))
+@store_login_required
+def remove_game_copy(game_id):
+    try:
+        # Get the latest copy
+        copy = (
+            get_db()
+            .execute(
+                "select copy_num from GameCopy where game_id = ? and store_id = ? order by copy_num desc limit 1",
+                (game_id, g.store["id"]),
+            )
+            .fetchone()
+        )
+
+        if not copy:
+            flash("No copies of this game found.")
+            return redirect(url_for("stores.my_store"))
+
+        game.delete_game_copy(game_id, g.store["id"], copy["copy_num"])
+        flash("Game copy removed successfully.")
+    except Exception as e:
+        flash(f"Error removing game copy: {str(e)}")
+
+    return redirect(url_for("stores.my_store"))
+
+
+@bp.route("/mystore/session/<int:session_id>/cancel", methods=("POST",))
+@store_login_required
+def cancel_store_session(session_id):
+    sess = get_session(session_id)
+    if not sess or sess["store_id"] != g.store["id"]:
+        flash("Session not found.")
+        return redirect(url_for("stores.my_store"))
+
+    try:
+        delete_session(session_id)
+        flash("Session cancelled successfully.")
+    except Exception as e:
+        flash(f"Error cancelling session: {str(e)}")
+
+    return redirect(url_for("stores.my_store"))
 
 
 @bp.route("/store/<int:store_id>")
@@ -256,41 +382,12 @@ def delete_table(store_id, table_num):
     db.commit()
 
 
-def seed_stores():
-    users = [("user1", "pass"), ("user2", "pass")]
-    user_ids = []
-    for username, password in users:
-        user_id = create_user(username, password)
-        user_ids.append(user_id)
+def update_table(store_id, table_num, capacity):
+    db = get_db()
+    db.execute(
+        'update "Table" set capacity = ? where store_id = ? and table_num = ?',
+        (capacity, store_id, table_num),
+    )
+    db.commit()
 
-    stores = [
-        ("store1", "Big Boy Playhouse", "pass"),
-        ("store2", "The Dawg Pen", "pass"),
-        ("store3", "The Den", "pass"),
-    ]
 
-    store_ids = []
-    for username, name, password in stores:
-        store_id = create_store(username, name, password, ignore=True)
-        store_ids.append(store_id)
-
-    for store_id in store_ids:
-        for _ in range(3):
-            create_table(store_id, 5)
-
-    # Create new games
-    games = ["Freakopoly", "Secret Freak", "Freaknames"]
-    game_ids = []
-    for game in games:
-        game_id = create_game(game)
-        game_ids.append(game_id)
-
-    # Add 1-3 copies of games to stores
-    for store_id in store_ids:
-        for game_id in game_ids:
-            n = 1
-            for _ in range(n):
-                create_game_copy(game_id, store_id)
-
-    today = str(date.today())
-    create_session(user_ids[0], store_ids[0], 1, today, 10, 15)

@@ -82,6 +82,17 @@ create table SessionGameCopy (
     primary key (session_id, game_id, store_id, copy_num)
 );
 
+create table GameDamage (
+    session_id integer not null,
+    game_id integer not null,
+    store_id integer not null,
+    copy_num integer not null,
+    description text,
+    foreign key (session_id) references Session(id),
+    foreign key (game_id, store_id, copy_num) references GameCopy(game_id, store_id, copy_num),
+    primary key (session_id, game_id, store_id, copy_num)
+);
+
 
 -- create table tier (
 --     tier_id   integer primary key autoincrement,

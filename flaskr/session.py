@@ -1,7 +1,7 @@
 from flaskr.db import get_db
 
 
-def create_session(user_id, store_id, table_num, day, start_time, end_time, game_ids):
+def create_session(user_id, store_id, table_num, day, start_time, end_time, game_ids=None):
     db = get_db()
     cursor = db.execute(
         "insert into Session (user_id, store_id, table_num, day, start_time, end_time)"
@@ -80,6 +80,24 @@ def get_sessions_by_store(store_id):
     return (
         get_db()
         .execute("select * from Session where store_id = ?", (store_id,))
+        .fetchall()
+    )
+
+
+def get_upcoming_sessions_with_user_by_store(store_id, today):
+    return (
+        get_db()
+        .execute(
+            """
+            select Session.*, User.username
+            from Session
+            join User on (Session.user_id = User.id)
+            where Session.store_id = ?
+            and Session.day >= ?
+            order by Session.day asc, Session.start_time asc
+            """,
+            (store_id, today),
+        )
         .fetchall()
     )
 

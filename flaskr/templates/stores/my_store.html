@@ -6,27 +6,148 @@
 {% endblock %}
 {% block content %}
     <div class="container">
-        <div class="col">
-            <h2>Tables</h2>
-            {% for table in tables %}
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">Table {{ table['table_num'] }}</h5>
-                        <p class="card-text text-muted">Seats: {{ table['capacity'] }}</p>
-                        <!-- <small>05336732940</small> -->
-                    </div>
+        <!-- TABLES SECTION -->
+        <section class="card-section">
+            <h2 class="card-section-title">Tables</h2>
+            {% if tables %}
+                <div class="card-grid card-grid-3col">
+                    {% for table in tables %}
+                        <div class="card h-100 store-card">
+                            <div class="card-body">
+                                <h5 class="card-title">Table {{ table['table_num'] }}</h5>
+                                <p class="card-text text-muted">Capacity: {{ table['capacity'] }} seats</p>
+                                <form method="post"
+                                      action="{{ url_for('stores.update_table_route', table_num=table['table_num']) }}"
+                                      style="display: inline;">
+                                    <input type="number"
+                                           name="capacity"
+                                           value="{{ table['capacity'] }}"
+                                           min="1"
+                                           class="form-control form-control-sm mb-2"
+                                           placeholder="Capacity">
+                                    <button type="submit" class="btn btn-sm btn-warning me-2">Save</button>
+                                </form>
+                                <form method="post"
+                                      action="{{ url_for('stores.delete_table_route', table_num=table['table_num']) }}"
+                                      style="display: inline;">
+                                    <button type="submit"
+                                            class="btn btn-sm btn-danger"
+                                            onclick="return confirm('Delete this table?')">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
                 </div>
-            {% endfor %}
-        </div>
-        <div class="col">
-            <h2>Games</h2>
-            {% for game_copy in game_copies %}
-                <div class="card h-50">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ game_copy['name'] }}</h5>
+            {% else %}
+                <p class="text-muted">No tables yet.</p>
+            {% endif %}
+
+            <div class="mt-4">
+                <h3>Add New Table</h3>
+                <form method="post" action="{{ url_for('stores.add_table') }}" class="d-flex gap-2 align-items-end">
+                    <div style="flex: 1; max-width: 200px;">
+                        <label for="table-capacity" class="form-label">Capacity (seats)</label>
+                        <input type="number"
+                               id="table-capacity"
+                               name="capacity"
+                               min="1"
+                               required
+                               class="form-control">
                     </div>
+                    <button type="submit" class="btn btn-primary">Add Table</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- GAMES SECTION -->
+        <section class="card-section">
+            <h2 class="card-section-title">Games</h2>
+            {% if games %}
+                <div class="card-grid card-grid-3col">
+                    {% for game in games %}
+                        <div class="card h-100 store-card">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ game['name'] }}</h5>
+                                <p class="card-text text-muted">
+                                    {{ game['copy_count'] }} {{ 'copy' if game['copy_count'] == 1 else 'copies' }}
+                                </p>
+                                <form method="post"
+                                      action="{{ url_for('stores.remove_game_copy', game_id=game['id']) }}"
+                                      style="display: inline;">
+                                    <button type="submit"
+                                            class="btn btn-sm btn-danger"
+                                            onclick="return confirm('Remove one copy?')">
+                                        Remove Copy
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
                 </div>
-            {% endfor %}
-        </div>
+            {% else %}
+                <p class="text-muted">No games yet.</p>
+            {% endif %}
+
+            <div class="mt-4">
+                <h3>Add Game Copy</h3>
+                <form method="post" action="{{ url_for('stores.add_game_copy') }}" class="d-flex gap-2 align-items-end">
+                    <div style="flex: 1; max-width: 250px;">
+                        <label for="game-select" class="form-label">Game</label>
+                        <select id="game-select" name="game_id" required class="form-select">
+                            <option value="">Select a game...</option>
+                            {% for game in all_games %}
+                                <option value="{{ game['id'] }}">{{ game['name'] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Copy</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- UPCOMING SESSIONS SECTION -->
+        <section class="card-section">
+            <h2 class="card-section-title">Upcoming Sessions</h2>
+            {% if upcoming_sessions %}
+                <div class="session-list">
+                    <div class="session-header">
+                        <div>Customer</div>
+                        <div>Date & Time</div>
+                        <div>Table</div>
+                        <div>Games</div>
+                        <div></div>
+                    </div>
+                    {% for sess in upcoming_sessions %}
+                        <div class="session-row">
+                            <div><strong>{{ sess['username'] }}</strong></div>
+                            <div>{{ sess['day'] }} • {{ sess['start_time'] }}:00 - {{ sess['end_time'] }}:00</div>
+                            <div>Table {{ sess['table_num'] }}</div>
+                            <div>
+                                {% if sess['games'] %}
+                                    {{ sess['games'] | length }} game{{ 's' if sess['games'] | length != 1 else '' }}
+                                {% else %}
+                                    No games
+                                {% endif %}
+                            </div>
+                            <div>
+                                <form method="post"
+                                      action="{{ url_for('stores.cancel_store_session', session_id=sess['id']) }}"
+                                      style="display: inline;">
+                                    <button type="submit"
+                                            class="btn btn-sm btn-danger"
+                                            onclick="return confirm('Cancel this session?')">
+                                        Cancel
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted">No upcoming sessions.</p>
+            {% endif %}
+        </section>
     </div>
 {% endblock %}

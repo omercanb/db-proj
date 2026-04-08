@@ -131,3 +131,61 @@ def get_available_games_with_counts(store_id):
         )
         .fetchall()
     )
+
+
+# GameDamage Functions
+def report_damage(session_id, game_id, store_id, copy_num, description):
+    db = get_db()
+    db.execute(
+        "insert into GameDamage (session_id, game_id, store_id, copy_num, description)"
+        " values (?, ?, ?, ?, ?)",
+        (session_id, game_id, store_id, copy_num, description),
+    )
+    db.commit()
+
+
+def get_damage_report(session_id, game_id, store_id, copy_num):
+    return (
+        get_db()
+        .execute(
+            "select * from GameDamage where session_id = ? and game_id = ? and store_id = ? and copy_num = ?",
+            (session_id, game_id, store_id, copy_num),
+        )
+        .fetchone()
+    )
+
+
+def get_damage_reports_by_session(session_id):
+    return (
+        get_db()
+        .execute(
+            """
+            select GameDamage.*, Game.name
+            from GameDamage
+            join Game on (GameDamage.game_id = Game.id)
+            where GameDamage.session_id = ?
+            """,
+            (session_id,),
+        )
+        .fetchall()
+    )
+
+
+def get_damage_reports_by_game_copy(game_id, store_id, copy_num):
+    return (
+        get_db()
+        .execute(
+            "select * from GameDamage where game_id = ? and store_id = ? and copy_num = ?",
+            (game_id, store_id, copy_num),
+        )
+        .fetchall()
+    )
+
+
+def delete_damage_report(session_id, game_id, store_id, copy_num):
+    db = get_db()
+    db.execute(
+        "delete from GameDamage where session_id = ? and game_id = ? and store_id = ? and copy_num = ?",
+        (session_id, game_id, store_id, copy_num),
+    )
+    db.commit()
