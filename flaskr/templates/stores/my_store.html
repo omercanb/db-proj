@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block header %}
+    <h1>
+        {% block title %}{{ g.store['name'] }}{% endblock %}
+    </h1>
+{% endblock %}
+{% block content %}
+    <div class="container">
+        <div class="col">
+            <h2>Tables</h2>
+            {% for table in tables %}
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Table {{ table['table_num'] }}</h5>
+                        <p class="card-text text-muted">Seats: {{ table['capacity'] }}</p>
+                        <!-- <small>05336732940</small> -->
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="col">
+            <h2>Games</h2>
+            {% for game_copy in game_copies %}
+                <div class="card h-50">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ game_copy['name'] }}</h5>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

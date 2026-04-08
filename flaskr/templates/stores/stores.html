@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 {% block header %}
-    <h1>{% block title %}Stores{% endblock %}</h1>
+    <h1>
+        {% block title %}Stores{% endblock %}
+    </h1>
 {% endblock %}
 {% block content %}
     <form method="get" class="mb-4">
@@ -10,18 +12,17 @@
                placeholder="Search stores..."
                class="form-control" />
     </form>
-    <div class="row row-cols-1 row-cols-md-3 g-4">
+    <div class="card-grid card-grid-3col">
         {% for store in stores %}
-            <div class="col">
-                <div class="card h-100">
+            <a href="{{ url_for('stores.store', store_id=store['id']) }}"
+               class="text-decoration-none">
+                <div class="card h-100 store-card">
                     <div class="card-body">
                         <h5 class="card-title">{{ store['name'] }}</h5>
-                        <p class="card-text text-muted">{{ store['username'] }}</p>
-                        <p class="card-text">Address</p>
-                        <small>05336732940</small>
+                        <p class="card-text text-muted">Placeholder Address</p>
                     </div>
                 </div>
-            </div>
+            </a>
         {% endfor %}
     </div>
 {% endblock %}

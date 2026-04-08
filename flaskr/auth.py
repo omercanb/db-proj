@@ -1,5 +1,7 @@
 import functools
 
+from datetime import date
+
 from flask import (
     Blueprint,
     flash,
@@ -13,6 +15,12 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from flaskr.db import get_db
+from flaskr.session import (
+    delete_session,
+    get_session,
+    get_session_games,
+    get_sessions_with_store_by_user,
+)
 from flaskr.stores import create_store, get_store, get_store_by_id
 from flaskr.user import create_user, get_user, get_user_by_id
 
@@ -74,17 +82,38 @@ def login():
     return render_template("auth/login.html")
 
 
+# @bp.before_app_request
+# def load_logged_in_user():
+#     user_id = session.get("user_id")
+#     store_id = session.get("store_id")
+#
+#     if user_id is None and store_id is None:
+#         g.user = None
+#     elif user_id is not None:
+#         g.user = get_user_by_id(user_id)
+#     else:
+#         g.user = get_store_by_id(store_id)
+
+
 @bp.before_app_request
 def load_logged_in_user():
     user_id = session.get("user_id")
-    store_id = session.get("store_id")
 
-    if user_id is None and store_id is None:
+    if user_id is None:
         g.user = None
-    elif user_id is not None:
-        g.user = get_user_by_id(user_id)
     else:
-        g.user = get_store_by_id(store_id)
+        g.user = get_user_by_id(user_id)
+
+
+def login_required(view):
+    @functools.wraps(view)
+    def wrapped_view(**kwargs):
+        if g.user is None:
+            return redirect(url_for("auth.login"))
+
+        return view(**kwargs)
+
+    return wrapped_view
 
 
 @bp.route("/registerstore", methods=("GET", "POST"))
@@ -151,12 +180,41 @@ def logout():
     return redirect(url_for("index"))
 
 
-def login_required(view):
-    @functools.wraps(view)
-    def wrapped_view(**kwargs):
-        if g.user is None:
-            return redirect(url_for("auth.login"))
+@bp.route("/sessions")
+@login_required
+def view_sessions():
+    sessions = get_sessions_with_store_by_user(g.user["id"])
+    today = str(date.today())
 
-        return view(**kwargs)
+    upcoming = []
+    past = []
 
-    return wrapped_view
+    for sess in sessions:
+        sess_dict = dict(sess)
+        sess_dict["games"] = get_session_games(sess["id"])
+        if sess["day"] >= today:
+            upcoming.append(sess_dict)
+        else:
+            past.append(sess_dict)
+
+    return render_template(
+        "auth/sessions.html", upcoming_sessions=upcoming, past_sessions=past
+    )
+
+
+@bp.route("/session/<int:session_id>/cancel", methods=("POST",))
+@login_required
+def cancel_session(session_id):
+    sess = get_session(session_id)
+
+    if not sess or sess["user_id"] != g.user["id"]:
+        flash("Session not found.")
+        return redirect(url_for("auth.view_sessions"))
+
+    try:
+        delete_session(session_id)
+        flash("Session cancelled successfully.")
+    except Exception as e:
+        flash(f"Error cancelling session: {str(e)}")
+
+    return redirect(url_for("auth.view_sessions"))

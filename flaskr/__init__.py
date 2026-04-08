@@ -43,14 +43,14 @@ def create_app(test_config=None):
 
     app.register_blueprint(auth.bp)
 
-    from . import blog
-
-    app.register_blueprint(blog.bp)
-    # Why is this line needed
-    app.add_url_rule("/", endpoint="index")
+    # from . import blog
+    #
+    # app.register_blueprint(blog.bp)
+    # app.add_url_rule("/", endpoint="index")
 
     from . import stores
 
     app.register_blueprint(stores.bp)
+    app.add_url_rule("/", endpoint="index")
 
     return app

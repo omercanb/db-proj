@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block header %}
+    <h1>
+        {% block title %}My Booked Sessions{% endblock %}
+    </h1>
+{% endblock %}
+{% block content %}
+    <div class="container">
+        <section class="card-section">
+            <h2 class="card-section-title">Upcoming Sessions</h2>
+            {% if upcoming_sessions %}
+                <div class="session-list">
+                    <div class="session-header">
+                        <div>Store</div>
+                        <div>Date & Time</div>
+                        <div>Table</div>
+                        <div>Games</div>
+                        <div></div>
+                    </div>
+                    {% for sess in upcoming_sessions %}
+                        <div class="session-row">
+                            <div><strong>{{ sess['store_name'] }}</strong></div>
+                            <div>{{ sess['day'] }} • {{ sess['start_time'] }}:00 - {{ sess['end_time'] }}:00</div>
+                            <div>Table {{ sess['table_num'] }}</div>
+                            <div>
+                                {% if sess['games'] %}
+                                    {{ sess['games'] | length }} game{{ 's' if sess['games'] | length != 1 else '' }}
+                                {% else %}
+                                    No games
+                                {% endif %}
+                            </div>
+                            <div>
+                                <form method="post"
+                                      action="{{ url_for('auth.cancel_session', session_id=sess['id']) }}"
+                                      style="display: inline;">
+                                    <button type="submit"
+                                            class="btn btn-sm btn-danger"
+                                            onclick="return confirm('Are you sure you want to cancel this session?')">
+                                        Cancel
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted">No upcoming sessions.</p>
+            {% endif %}
+        </section>
+
+        <section class="card-section">
+            <h2 class="card-section-title">Past Sessions</h2>
+            {% if past_sessions %}
+                <div class="session-list">
+                    <div class="session-header">
+                        <div>Store</div>
+                        <div>Date & Time</div>
+                        <div>Table</div>
+                        <div>Games</div>
+                        <div></div>
+                    </div>
+                    {% for sess in past_sessions %}
+                        <div class="session-row past">
+                            <div><strong>{{ sess['store_name'] }}</strong></div>
+                            <div>{{ sess['day'] }} • {{ sess['start_time'] }}:00 - {{ sess['end_time'] }}:00</div>
+                            <div>Table {{ sess['table_num'] }}</div>
+                            <div>
+                                {% if sess['games'] %}
+                                    {{ sess['games'] | length }} game{{ 's' if sess['games'] | length != 1 else '' }}
+                                {% else %}
+                                    No games
+                                {% endif %}
+                            </div>
+                            <div></div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted">No past sessions.</p>
+            {% endif %}
+        </section>
+    </div>
+{% endblock %}

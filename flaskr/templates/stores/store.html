@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block header %}
+    <h1>
+        {% block title %}{{ store['name'] }}{% endblock %}
+    </h1>
+{% endblock %}
+{% block content %}
+    <div class="container">
+        <div class="mb-4">
+            <a href="{{ url_for("stores.book_session", store_id=store['id']) }}"
+               class="btn btn-primary btn-lg">Book Session</a>
+        </div>
+        <section class="card-section">
+            <h2 class="card-section-title">Tables</h2>
+            <div class="card-grid card-grid-3col">
+                {% for table in tables %}
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Table {{ table['table_num'] }}</h5>
+                            <p class="card-text text-muted">Capacity: {{ table['capacity'] }} seats</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+        <section class="card-section">
+            <h2 class="card-section-title">Available Games</h2>
+            {% if games %}
+                <div class="card-grid card-grid-3col">
+                    {% for game in games %}
+                        <div class="card h-100 ">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ game['name'] }}</h5>
+                                <p class="card-text text-muted">{{ game['copy_count'] }} {{ 'copy' if game['copy_count'] == 1 else 'copies' }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted">No games available at this store.</p>
+            {% endif %}
+        </section>
+    </div>
+{% endblock %}

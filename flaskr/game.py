@@ -1,0 +1,133 @@
+from flaskr.db import get_db
+
+
+# Game Functions
+def create_game(name, ignore=False):
+    db = get_db()
+    cursor = db.execute(
+        f"insert {'or ignore' if ignore else ''} into Game (name) values (?)",
+        (name,),
+    )
+    db.commit()
+    return cursor.lastrowid
+
+
+def get_games():
+    return get_db().execute("select * from Game").fetchall()
+
+
+def get_game(game_id):
+    return get_db().execute("select * from Game where id = ?", (game_id,)).fetchone()
+
+
+def get_game_by_name(name):
+    return get_db().execute("select * from Game where name = ?", (name,)).fetchone()
+
+
+def delete_game(game_id):
+    db = get_db()
+    db.execute("delete from Game where id = ?", (game_id,))
+    db.commit()
+
+
+# GameCopy Functions
+def create_game_copy(game_id, store_id, ignore=False):
+    db = get_db()
+    next_num = db.execute(
+        "select coalesce(max(copy_num), 0) + 1 from GameCopy where game_id = ? and store_id = ?",
+        (game_id, store_id),
+    ).fetchone()[0]
+    db.execute(
+        f"insert {'or ignore' if ignore else ''} into GameCopy (game_id, store_id, copy_num) values (?, ?, ?)",
+        (game_id, store_id, next_num),
+    )
+    db.commit()
+    return next_num
+
+
+def get_game_copies(store_id):
+    return (
+        get_db()
+        .execute(
+            "select * from GameCopy join Game on (game_id = id) where store_id = ?",
+            (store_id,),
+        )
+        .fetchall()
+    )
+
+
+def get_game_copy_count(store_id):
+    return (
+        get_db()
+        .execute("select count(*) from GameCopy where store_id = ?", (store_id,))
+        .fetchone()[0]
+    )
+
+
+def get_game_copies_by_game(game_id, store_id):
+    return (
+        get_db()
+        .execute(
+            "select * from GameCopy where game_id = ? and store_id = ?",
+            (game_id, store_id),
+        )
+        .fetchall()
+    )
+
+
+def delete_game_copy(game_id, store_id, copy_num):
+    db = get_db()
+    db.execute(
+        "delete from GameCopy where game_id = ? and store_id = ? and copy_num = ?",
+        (game_id, store_id, copy_num),
+    )
+    db.commit()
+
+
+def get_available_games(store_id):
+    return (
+        get_db()
+        .execute(
+            """
+            select distinct Game.id, Game.name
+            from Game
+            join GameCopy on (Game.id = GameCopy.game_id)
+            where GameCopy.store_id = ?
+            """,
+            (store_id,),
+        )
+        .fetchall()
+    )
+
+
+def get_unavailable_games(store_id):
+    return (
+        get_db()
+        .execute(
+            """
+            select * from Game
+            where id not in (
+                select distinct game_id from GameCopy where store_id = ?
+            )
+            """,
+            (store_id,),
+        )
+        .fetchall()
+    )
+
+
+def get_available_games_with_counts(store_id):
+    return (
+        get_db()
+        .execute(
+            """
+            select Game.id, Game.name, count(*) as copy_count
+            from Game
+            join GameCopy on (Game.id = GameCopy.game_id)
+            where GameCopy.store_id = ?
+            group by Game.id, Game.name
+            """,
+            (store_id,),
+        )
+        .fetchall()
+    )

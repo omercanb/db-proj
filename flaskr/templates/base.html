@@ -19,7 +19,23 @@
         <ul class="navbar-nav d-flex flex-row gap-3">
             {% if g.user %}
                 <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for("stores.stores") }}">Stores</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for("auth.view_sessions") }}">My Sessions</a>
+                </li>
+                <li class="nav-item">
                     <span class="nav-link">{{ g.user['username'] }}</span>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for("auth.logout") }}">Log Out</a>
+                </li>
+            {% elif g.store %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for("stores.my_store") }}">My Store</a>
+                </li>
+                <li class="nav-item">
+                    <span class="nav-link">{{ g.user['name'] }}</span>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for("auth.logout") }}">Log Out</a>

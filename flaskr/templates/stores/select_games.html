@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block header %}
+    <h1>
+        {% block title %}Select Games - Table {{ table['table_num'] }}{% endblock %}
+    </h1>
+{% endblock %}
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8">
+                <h2>{{ store['name'] }}</h2>
+                <p class="text-muted">Booking Table {{ table['table_num'] }} from {{ start_time }}:00 to {{ end_time }}:00</p>
+                <form method="post"
+                      action="{{ url_for('stores.confirm_booking', store_id=store['id'], table_num=table['table_num']) }}">
+                    <input type="hidden" name="start_time" value="{{ start_time }}" />
+                    <input type="hidden" name="end_time" value="{{ end_time }}" />
+                    <h3>Available Games</h3>
+                    {% if available_games %}
+                        <div class="card-grid card-grid-3col mb-5">
+                            {% for game in available_games %}
+                                <label class="card h-100 store-card">
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input"
+                                                   type="checkbox"
+                                                   name="selected_games"
+                                                   value="{{ game['id'] }}"
+                                                   id="game-{{ game['id'] }}">
+                                            <span style="margin-left: 0.5rem;">
+                                                <h5 class="card-title">{{ game['name'] }}</h5>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </label>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No games available at this store.</p>
+                    {% endif %}
+                    {% if unavailable_games %}
+                        <h3 class="text-muted pt-4">Unavailable Games</h3>
+                        <div class="card-grid card-grid-3col">
+                            {% for game in unavailable_games %}
+                                <div class="card h-100 store-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-muted">{{ game['name'] }}</h5>
+                                        <p class="card-text text-muted">Out of stock</p>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div>
+                        <button type="submit" class="btn btn-primary btn-lg">Confirm Booking</button>
+                        <a href="{{ url_for('stores.store', store_id=store['id']) }}"
+                           class="btn btn-secondary btn-lg ms-2">Cancel</a>
+                    </div>
+                </form>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5>Booking Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>
+                            <strong>Store:</strong> {{ store['name'] }}
+                        </p>
+                        <p>
+                            <strong>Table:</strong> {{ table['table_num'] }}
+                        </p>
+                        <p>
+                            <strong>Capacity:</strong> {{ table['capacity'] }} seats
+                        </p>
+                        <p>
+                            <strong>Time:</strong> {{ start_time }}:00 - {{ end_time }}:00
+                        </p>
+                        <p>
+                            <strong>Duration:</strong> {{ end_time - start_time }} hours
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

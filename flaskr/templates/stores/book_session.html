@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block header %}
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.js"></script>
+    <h1>
+        {% block title %}{{ store['name'] }}{% endblock %}
+    </h1>
+{% endblock %}
+{% block content %}
+    <div class="container">
+        <div class="container">
+            <h2>Browse Available Tables</h2>
+            <div class="w-50 py-2">
+                <!-- hidden inputs so the values get submitted with the form -->
+                <form method="get">
+                    <input type="date"
+                           id="day"
+                           name="day"
+                           class="form-control mb-4"
+                           min="{{ today }}"
+                           value="{{ day }}" />
+                    <input type="hidden" name="day" id="day" />
+                    <input type="hidden" name="start_time" id="start_time" />
+                    <input type="hidden" name="end_time" id="end_time" />
+                    <div id="time-slider"></div>
+                    <p class="mt-2">
+                        Selected: <span id="slider-label"></span>
+                    </p>
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </form>
+            </div>
+        </div>
+        <div class="col">
+            <h2>Available Tables Between {{ start_time }} and {{ end_time }}</h2>
+            {% if tables %}
+                <div class="card-grid card-grid-3col">
+                    {% for table in tables %}
+                        <a href="{{ url_for('stores.select_games', store_id=table['store_id'], table_num=table['table_num'], start_time=start_time, end_time=end_time) }}"
+                           class="text-decoration-none">
+                            <div class="card h-100 store-card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Table {{ table['table_num'] }}</h5>
+                                    <p class="card-text text-muted">Seats: {{ table['capacity'] }}</p>
+                                </div>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted">No available tables for the selected time slot.</p>
+            {% endif %}
+            {% if unvailable_tables %}
+                <h2 class="text-muted pt-4">Unavailable Tables</h2>
+                <div class="card-grid card-grid-3col">
+                    {% for table in unvailable_tables %}
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title text-muted">Table {{ table['table_num'] }}</h5>
+                                <p class="card-text text-muted">Seats: {{ table['capacity'] }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+  const slider = document.getElementById("time-slider");
+
+  noUiSlider.create(slider, {
+      start: [{{start_time}}, {{end_time}}], // default 9am to 5pm
+    connect: true, // fills the bar between the two handles
+    step: 1,
+    range: { min: 0, max: 23 },
+  });
+
+  slider.noUiSlider.on("update", function (values) {
+    const start = Math.round(values[0]);
+    const end = Math.round(values[1]);
+    document.getElementById("slider-label").textContent =
+      `${start}:00 - ${end}:00`;
+    document.getElementById("start_time").value = start;
+    document.getElementById("end_time").value = end;
+  });
+    </script>
+{% endblock %}
