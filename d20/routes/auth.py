@@ -14,15 +14,15 @@ from flask import (
 )
 from werkzeug.security import check_password_hash
 
-from flaskr.db import get_db
-from flaskr.db.session import (
+from d20.db import get_db
+from d20.db.session import (
     delete_session,
     get_session,
     get_session_games,
     get_sessions_with_store_by_user,
 )
-from flaskr.db.stores import create_store, get_store, get_store_by_id
-from flaskr.db.user import create_user, get_user, get_user_by_id
+from d20.db.stores import create_store, get_store, get_store_by_id
+from d20.db.user import create_user, get_user, get_user_by_id
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
 

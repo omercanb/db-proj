@@ -1,5 +1,5 @@
 [project]
-name = "flaskr"
+name = "d20"
 version = "1.0.0"
 description = "The basic blog app built in the Flask tutorial."
 dependencies = [
@@ -15,5 +15,5 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 branch = true
-source = ["flaskr"]
+source = ["d20"]
 

@@ -1,4 +1,4 @@
-from flaskr.db import get_db
+from d20.db import get_db
 
 
 def create_session(user_id, store_id, table_num, day, start_time, end_time, game_ids=None):

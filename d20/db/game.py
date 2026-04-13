@@ -1,4 +1,4 @@
-from flaskr.db import get_db
+from d20.db import get_db
 
 
 # Game Functions

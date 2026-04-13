@@ -12,8 +12,8 @@ from flask import (
     url_for,
 )
 
-from flaskr.db import get_db
-from flaskr.db.game import (
+from d20.db import get_db
+from d20.db.game import (
     create_game_copy,
     get_games,
     delete_game_copy,
@@ -22,7 +22,7 @@ from flaskr.db.game import (
     get_game_copies,
     get_unavailable_games_during,
 )
-from flaskr.db.session import (
+from d20.db.session import (
     create_session,
     delete_session,
     get_available_tables,
@@ -31,7 +31,7 @@ from flaskr.db.session import (
     get_unavailable_tables,
     get_upcoming_sessions_with_user_by_store,
 )
-from flaskr.db.stores import (
+from d20.db.stores import (
     create_table,
     get_tables,
     get_table,

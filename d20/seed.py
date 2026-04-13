@@ -3,10 +3,10 @@ from datetime import date
 
 import click
 
-from flaskr.db.game import create_game, create_game_copy
-from flaskr.db.session import create_session
-from flaskr.db.stores import create_store, create_table
-from flaskr.db.user import create_user
+from d20.db.game import create_game, create_game_copy
+from d20.db.session import create_session
+from d20.db.stores import create_store, create_table
+from d20.db.user import create_user
 
 
 def seed_stores():

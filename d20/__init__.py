@@ -3,7 +3,7 @@ import os
 from flask import Flask, render_template
 from flask_bootstrap import Bootstrap5
 
-from flaskr import seed
+from d20 import seed
 
 
 def create_app(test_config=None):
@@ -12,7 +12,7 @@ def create_app(test_config=None):
     bootstrap = Bootstrap5(app)
     app.config.from_mapping(
         SECRET_KEY="dev",
-        DATABASE=os.path.join(app.instance_path, "flaskr.sqlite"),
+        DATABASE=os.path.join(app.instance_path, "d20.sqlite"),
     )
 
     if test_config is None:

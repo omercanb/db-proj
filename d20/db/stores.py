@@ -1,6 +1,6 @@
 from werkzeug.security import generate_password_hash
 
-from flaskr.db import get_db
+from d20.db import get_db
 
 
 def create_store(username, name, password):
