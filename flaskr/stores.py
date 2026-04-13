@@ -17,10 +17,10 @@ from flaskr import game
 from flaskr.db import get_db
 from flaskr.game import (
     create_game_copy,
-    get_available_games,
+    get_available_games_during,
     get_available_games_with_counts,
     get_game_copies,
-    get_unavailable_games,
+    get_unavailable_games_during,
 )
 from flaskr.session import (
     create_session,
@@ -252,13 +252,14 @@ def select_games(store_id, table_num):
     if not g.user:
         return redirect(url_for("auth.login"))
 
+    day = request.args.get("day", str(date.today()))
     start_time = request.args.get("start_time", 9, type=int)
     end_time = request.args.get("end_time", 20, type=int)
 
     store = get_store_by_id(store_id)
     table = get_table(store_id, table_num)
-    available_games = get_available_games(store_id)
-    unavailable_games = get_unavailable_games(store_id)
+    available_games = get_available_games_during(store_id, day, start_time, end_time)
+    unavailable_games = get_unavailable_games_during(store_id, day, start_time, end_time)
 
     return render_template(
         "stores/select_games.html",
@@ -266,6 +267,7 @@ def select_games(store_id, table_num):
         table=table,
         available_games=available_games,
         unavailable_games=unavailable_games,
+        day=day,
         start_time=start_time,
         end_time=end_time,
     )
@@ -278,6 +280,7 @@ def confirm_booking(store_id, table_num):
     if not g.user:
         return redirect(url_for("auth.login"))
 
+    day = request.form.get("day")
     start_time = request.form.get("start_time", type=int)
     end_time = request.form.get("end_time", type=int)
     selected_games = request.form.getlist("selected_games")
@@ -289,16 +292,16 @@ def confirm_booking(store_id, table_num):
                 "stores.select_games",
                 store_id=store_id,
                 table_num=table_num,
+                day=day,
                 start_time=start_time,
                 end_time=end_time,
             )
         )
 
-    today = str(date.today())
     try:
         game_ids = [int(game_id) for game_id in selected_games]
         create_session(
-            g.user["id"], store_id, table_num, today, start_time, end_time, game_ids
+            g.user["id"], store_id, table_num, day, start_time, end_time, game_ids
         )
         flash(
             f"Session booked! Table {table_num} from {start_time}:00 to {end_time}:00"
@@ -311,6 +314,7 @@ def confirm_booking(store_id, table_num):
                 "stores.select_games",
                 store_id=store_id,
                 table_num=table_num,
+                day=day,
                 start_time=start_time,
                 end_time=end_time,
             )

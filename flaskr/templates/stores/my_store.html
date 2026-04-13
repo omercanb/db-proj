@@ -126,7 +126,7 @@
                             <div>Table {{ sess['table_num'] }}</div>
                             <div>
                                 {% if sess['games'] %}
-                                    {{ sess['games'] | length }} game{{ 's' if sess['games'] | length != 1 else '' }}
+                                    {% for game in sess['games'] %}{{ game['name'] }}{% if not loop.last %}, {% endif %}{% endfor %}
                                 {% else %}
                                     No games
                                 {% endif %}

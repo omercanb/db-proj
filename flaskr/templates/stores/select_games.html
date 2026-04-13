@@ -12,6 +12,7 @@
                 <p class="text-muted">Booking Table {{ table['table_num'] }} from {{ start_time }}:00 to {{ end_time }}:00</p>
                 <form method="post"
                       action="{{ url_for('stores.confirm_booking', store_id=store['id'], table_num=table['table_num']) }}">
+                    <input type="hidden" name="day" value="{{ day }}" />
                     <input type="hidden" name="start_time" value="{{ start_time }}" />
                     <input type="hidden" name="end_time" value="{{ end_time }}" />
                     <h3>Available Games</h3>
@@ -28,6 +29,9 @@
                                                    id="game-{{ game['id'] }}">
                                             <span style="margin-left: 0.5rem;">
                                                 <h5 class="card-title">{{ game['name'] }}</h5>
+                                                <p class="card-text text-muted">
+                                                    {{ game['available_copies'] }} of {{ game['total_copies'] }} available
+                                                </p>
                                             </span>
                                         </div>
                                     </div>
@@ -35,7 +39,7 @@
                             {% endfor %}
                         </div>
                     {% else %}
-                        <p class="text-muted">No games available at this store.</p>
+                        <p class="text-muted">No games available for this time slot.</p>
                     {% endif %}
                     {% if unavailable_games %}
                         <h3 class="text-muted pt-4">Unavailable Games</h3>
@@ -44,7 +48,7 @@
                                 <div class="card h-100 store-card">
                                     <div class="card-body">
                                         <h5 class="card-title text-muted">{{ game['name'] }}</h5>
-                                        <p class="card-text text-muted">Out of stock</p>
+                                        <p class="card-text text-muted">All {{ game['total_copies'] }} copies booked</p>
                                     </div>
                                 </div>
                             {% endfor %}

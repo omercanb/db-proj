@@ -84,33 +84,63 @@ def delete_game_copy(game_id, store_id, copy_num):
     db.commit()
 
 
-def get_available_games(store_id):
+def get_available_games_during(store_id, day, start_time, end_time):
+    """Get games with at least one available copy during the time interval."""
     return (
         get_db()
         .execute(
             """
-            select distinct Game.id, Game.name
+            select Game.id, Game.name,
+                   count(GameCopy.copy_num) as total_copies,
+                   (count(GameCopy.copy_num) - coalesce(sum(
+                       case when SessionGameCopy.session_id is not null
+                            and Session.day = ?
+                            and Session.start_time < ?
+                            and Session.end_time > ?
+                       then 1 else 0 end
+                   ), 0)) as available_copies
             from Game
-            join GameCopy on (Game.id = GameCopy.game_id)
-            where GameCopy.store_id = ?
+            join GameCopy on (Game.id = GameCopy.game_id and GameCopy.store_id = ?)
+            left join SessionGameCopy on (GameCopy.game_id = SessionGameCopy.game_id
+                                         and GameCopy.store_id = SessionGameCopy.store_id
+                                         and GameCopy.copy_num = SessionGameCopy.copy_num)
+            left join Session on (SessionGameCopy.session_id = Session.id)
+            group by Game.id, Game.name
+            having available_copies > 0
+            order by Game.name
             """,
-            (store_id,),
+            (day, end_time, start_time, store_id),
         )
         .fetchall()
     )
 
 
-def get_unavailable_games(store_id):
+def get_unavailable_games_during(store_id, day, start_time, end_time):
+    """Get games with zero available copies during the time interval."""
     return (
         get_db()
         .execute(
             """
-            select * from Game
-            where id not in (
-                select distinct game_id from GameCopy where store_id = ?
-            )
+            select Game.id, Game.name,
+                   count(GameCopy.copy_num) as total_copies,
+                   (count(GameCopy.copy_num) - coalesce(sum(
+                       case when SessionGameCopy.session_id is not null
+                            and Session.day = ?
+                            and Session.start_time < ?
+                            and Session.end_time > ?
+                       then 1 else 0 end
+                   ), 0)) as available_copies
+            from Game
+            join GameCopy on (Game.id = GameCopy.game_id and GameCopy.store_id = ?)
+            left join SessionGameCopy on (GameCopy.game_id = SessionGameCopy.game_id
+                                         and GameCopy.store_id = SessionGameCopy.store_id
+                                         and GameCopy.copy_num = SessionGameCopy.copy_num)
+            left join Session on (SessionGameCopy.session_id = Session.id)
+            group by Game.id, Game.name
+            having available_copies = 0
+            order by Game.name
             """,
-            (store_id,),
+            (day, end_time, start_time, store_id),
         )
         .fetchall()
     )

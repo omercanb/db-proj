@@ -39,14 +39,23 @@ def seed_stores():
         game_ids.append(game_id)
 
     # Add 1-3 copies of games to stores
+    store_to_game_copy = {}
     for store_id in store_ids:
+        store_to_game_copy[store_id] = []
         for game_id in game_ids:
             n = 1
             for _ in range(n):
-                create_game_copy(game_id, store_id)
+                copy_num = create_game_copy(game_id, store_id)
+                store_to_game_copy[store_id].append((game_id, copy_num))
 
-    today = str(date.today())
-    create_session(user_ids[0], store_ids[0], 1, today, 10, 15)
+    user = user_ids[0]
+    store = store_ids[0]
+    table_num = 1
+    day = str(date.today())
+    start = 10
+    end = 15
+    games_used = [copy_num for game_id, copy_num in store_to_game_copy[store][:1]]
+    create_session(user, store, table_num, day, start, end, games_used)
 
 
 @click.command("seed")

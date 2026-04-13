@@ -36,7 +36,7 @@
             {% if tables %}
                 <div class="card-grid card-grid-3col">
                     {% for table in tables %}
-                        <a href="{{ url_for('stores.select_games', store_id=table['store_id'], table_num=table['table_num'], start_time=start_time, end_time=end_time) }}"
+                        <a href="{{ url_for('stores.select_games', store_id=table['store_id'], table_num=table['table_num'], day=day, start_time=start_time, end_time=end_time) }}"
                            class="text-decoration-none">
                             <div class="card h-100 store-card">
                                 <div class="card-body">

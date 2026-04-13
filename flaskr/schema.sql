@@ -7,6 +7,7 @@ drop table if exists Game;
 drop table if exists GameCopy;
 drop table if exists Session;
 drop table if exists SessionGameCopy;
+drop table if exists GameDamage;
 
 -- CREATE TABLE post (
 --   id INTEGER PRIMARY KEY AUTOINCREMENT,
