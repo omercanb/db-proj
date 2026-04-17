@@ -13,78 +13,82 @@ from d20.db.market.orders import create_order
 from d20.db.market.participant_inventory import increment_available_quantity
 from d20.db.session import create_session
 from d20.db.stores import create_store, create_table
-from d20.db.user import create_user, get_user_by_id
+from d20.db.user import create_user
+
+
+def seed_users():
+    users = [("user1", "pass"), ("user2", "pass")]
+    return [create_user(username, password) for username, password in users]
 
 
 def seed_stores():
-    users = [("user1", "pass"), ("user2", "pass")]
-    user_ids = []
-    for username, password in users:
-        user_id = create_user(username, password)
-        user_ids.append(user_id)
-
     stores = [
         ("store1", "Big Boy Playhouse", "pass"),
         ("store2", "The Dawg Pen", "pass"),
         ("store3", "The Den", "pass"),
     ]
-
-    store_ids = []
-    for username, name, password in stores:
-        store_id = create_store(username, name, password)
-        store_ids.append(store_id)
-
+    store_ids = [
+        create_store(username, name, password) for username, name, password in stores
+    ]
     for store_id in store_ids:
         for _ in range(3):
             create_table(store_id, 5)
+    return store_ids
 
-    # Create new games
-    games = ["Freakopoly", "Secret Freak", "Freaknames"]
-    symbols = ["FRKPOL", "SCRTFRK", "FRKNMS"]
-    game_ids = []
-    for game, symbol in zip(games, symbols):
-        game_id = create_game(game, symbol)
-        game_ids.append(game_id)
 
-    # Add 1-3 copies of games to stores
+def seed_games():
+    games = [
+        ("Freakopoly", "FRKPOL"),
+        ("Secret Freak", "SCRTFRK"),
+        ("Freaknames", "FRKNMS"),
+    ]
+    return [create_game(name, symbol) for name, symbol in games]
+
+
+def seed_game_copies(store_ids, game_ids):
     store_to_game_copy = {}
     for store_id in store_ids:
         store_to_game_copy[store_id] = []
         for game_id in game_ids:
-            n = 1
-            for _ in range(n):
-                copy_num = create_game_copy(game_id, store_id)
-                store_to_game_copy[store_id].append((game_id, copy_num))
+            copy_num = create_game_copy(game_id, store_id)
+            store_to_game_copy[store_id].append((game_id, copy_num))
+    return store_to_game_copy
 
-    # TODO refactor into another function
+
+def seed_session(user_ids, store_ids, store_to_game_copy):
     user1 = user_ids[0]
     store1 = store_ids[0]
-    table_num = 1
-    day = str(date.today())
-    start = 10
-    end = 15
     games_used = [copy_num for game_id, copy_num in store_to_game_copy[store1][:1]]
-    create_session(user1, store1, table_num, day, start, end, games_used)
+    create_session(user1, store1, 1, str(date.today()), 10, 15, games_used)
 
-    # Seed some active trades from user1
+
+def seed_orders(user_ids, game_ids):
+    # Have user1 put out one buy and sell order for game 1 and 2
+    user1 = user_ids[0]
     user1_market = get_market_participant_by_customer(user1)["id"]
-
-    # Buy 2 copies of game 1 for 20 dollars (needs available cash to reserve)
     increment_available_cash(user1_market, 100)
     game1 = game_ids[0]
     create_order(user1_market, game1, "LIMIT", "BUY", 20, 2)
-
-    # Sell 3 copies of game 2 for 30 dollars (needs available inventory)
     game2 = game_ids[1]
-    increment_available_quantity(
-        user1_market,
-        game2,
-        3,
-    )
+    increment_available_quantity(user1_market, game2, 3)
     create_order(user1_market, game2, "LIMIT", "SELL", 30, 3)
+    # Have user1 match the sell order to buy a game
+    user2 = user_ids[1]
+    user2_market = get_market_participant_by_customer(user2)["id"]
+    increment_available_cash(user2_market, 100)
+    create_order(user2_market, game2, "MARKET", "BUY", None, 1)
+
+
+def seed_the_universe():
+    user_ids = seed_users()
+    store_ids = seed_stores()
+    game_ids = seed_games()
+    store_to_game_copy = seed_game_copies(store_ids, game_ids)
+    seed_session(user_ids, store_ids, store_to_game_copy)
+    seed_orders(user_ids, game_ids)
 
 
 @click.command("seed")
 def seed_db_command():
-    seed_stores()
+    seed_the_universe()
     click.echo("Seeded database.")

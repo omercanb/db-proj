@@ -29,7 +29,7 @@ def test_limit_buy_matches_sell(app):
         buyer_id, seller_id = make_participants()
 
         # Seller places SELL LIMIT at $10 for 5 units (reserves 5 inventory)
-        sell_order_id = create_order(
+        sell_order_id, _, _ = create_order(
             participant_id=seller_id,
             game_id=1,
             order_type="LIMIT",
@@ -38,8 +38,8 @@ def test_limit_buy_matches_sell(app):
             initial_quantity=5,
         )
 
-        # Buyer places BUY LIMIT at $10 for 5 units (reserves $50 cash)
-        buy_order_id = create_order(
+        # Buyer places BUY LIMIT at $10 for 5 units (reserves $50 cash, auto-matches)
+        buy_order_id, num_fills, error = create_order(
             participant_id=buyer_id,
             game_id=1,
             order_type="LIMIT",
@@ -47,9 +47,8 @@ def test_limit_buy_matches_sell(app):
             price=10.0,
             initial_quantity=5,
         )
-
-        # Match the new buy order
-        try_match_order(buy_order_id)
+        assert error is False
+        assert num_fills == 5
 
         # Verify orders are COMPLETED
         buy = get_order(buy_order_id)
@@ -84,7 +83,7 @@ def test_limit_sell_matches_buy(app):
         buyer_id, seller_id = make_participants()
 
         # Buyer places BUY LIMIT at $15 for 3 units (reserves $45 cash)
-        buy_order_id = create_order(
+        buy_order_id, _, _ = create_order(
             participant_id=buyer_id,
             game_id=1,
             order_type="LIMIT",
@@ -93,8 +92,8 @@ def test_limit_sell_matches_buy(app):
             initial_quantity=3,
         )
 
-        # Seller places SELL LIMIT at $12 for 3 units (reserves 3 inventory)
-        sell_order_id = create_order(
+        # Seller places SELL LIMIT at $12 for 3 units (reserves 3 inventory, auto-matches)
+        sell_order_id, num_fills, error = create_order(
             participant_id=seller_id,
             game_id=1,
             order_type="LIMIT",
@@ -102,9 +101,8 @@ def test_limit_sell_matches_buy(app):
             price=12.0,
             initial_quantity=3,
         )
-
-        # Match the new sell order
-        try_match_order(sell_order_id)
+        assert error is False
+        assert num_fills == 3
 
         # Verify both COMPLETED
         buy = get_order(buy_order_id)
@@ -129,12 +127,12 @@ def test_limit_sell_matches_buy(app):
 
 
 def test_market_buy_matches_sell(app):
-    """Buyer MARKET order matches seller SELL LIMIT. Execution at seller's price. But not enough liquidity so order can't complete fully"""
+    """Buyer MARKET order matches seller SELL LIMIT. Not enough liquidity, so order is cancelled."""
     with app.app_context():
         buyer_id, seller_id = make_participants()
 
         # Seller places SELL LIMIT at $8 for 4 units (reserves 4 inventory)
-        sell_order_id = create_order(
+        sell_order_id, _, _ = create_order(
             participant_id=seller_id,
             game_id=1,
             order_type="LIMIT",
@@ -143,8 +141,8 @@ def test_market_buy_matches_sell(app):
             initial_quantity=4,
         )
 
-        # Buyer places BUY MARKET for 4 units (price=None, reserves cash at worst-case price)
-        buy_order_id = create_order(
+        # Buyer places BUY MARKET for 8 units (only 4 available, so partial fill then cancelled)
+        buy_order_id, num_fills, error = create_order(
             participant_id=buyer_id,
             game_id=1,
             order_type="MARKET",
@@ -152,12 +150,10 @@ def test_market_buy_matches_sell(app):
             price=None,
             initial_quantity=8,
         )
-
-        # Match the new buy order
-        num_fills = try_match_order(buy_order_id)
+        assert error is False
         assert num_fills == 4
 
-        # Verify both COMPLETED
+        # Verify buy is CANCELLED (not enough liquidity), sell is COMPLETED
         buy = get_order(buy_order_id)
         sell = get_order(sell_order_id)
         assert buy["status"] == "CANCELLED"
@@ -173,13 +169,14 @@ def test_market_buy_matches_sell(app):
         assert trades[0]["execution_price"] == 8.0
 
 
+
 def test_market_sell_matches_buy(app):
     """Seller MARKET order matches buyer BUY LIMIT. Execution at buyer's price."""
     with app.app_context():
         buyer_id, seller_id = make_participants()
 
         # Buyer places BUY LIMIT at $20 for 2 units (reserves $40 cash)
-        buy_order_id = create_order(
+        buy_order_id, _, _ = create_order(
             participant_id=buyer_id,
             game_id=1,
             order_type="LIMIT",
@@ -188,8 +185,8 @@ def test_market_sell_matches_buy(app):
             initial_quantity=2,
         )
 
-        # Seller places SELL MARKET for 2 units (price=None, reserves 2 inventory)
-        sell_order_id = create_order(
+        # Seller places SELL MARKET for 2 units (auto-matches)
+        sell_order_id, num_fills, error = create_order(
             participant_id=seller_id,
             game_id=1,
             order_type="MARKET",
@@ -197,9 +194,8 @@ def test_market_sell_matches_buy(app):
             price=None,
             initial_quantity=2,
         )
-
-        # Match the new sell order
-        try_match_order(sell_order_id)
+        assert error is False
+        assert num_fills == 2
 
         # Verify both COMPLETED
         buy = get_order(buy_order_id)
@@ -223,7 +219,7 @@ def test_partial_fill(app):
         buyer_id, seller_id = make_participants()
 
         # Seller places SELL LIMIT at $10 for 3 units (reserves 3 inventory)
-        sell_order_id = create_order(
+        sell_order_id, _, _ = create_order(
             participant_id=seller_id,
             game_id=1,
             order_type="LIMIT",
@@ -232,8 +228,8 @@ def test_partial_fill(app):
             initial_quantity=3,
         )
 
-        # Buyer places BUY LIMIT at $10 for 5 units (more than available, reserves $50 cash)
-        buy_order_id = create_order(
+        # Buyer places BUY LIMIT at $10 for 5 units (more than available, auto-matches)
+        buy_order_id, num_fills, error = create_order(
             participant_id=buyer_id,
             game_id=1,
             order_type="LIMIT",
@@ -241,6 +237,8 @@ def test_partial_fill(app):
             price=10.0,
             initial_quantity=5,
         )
+        assert error is False
+        assert num_fills == 3
 
         # Match the new buy order
         try_match_order(buy_order_id)
@@ -264,7 +262,7 @@ def test_no_match_price_mismatch(app):
         buyer_id, seller_id = make_participants()
 
         # Seller places SELL LIMIT at $20 for 5 units (reserves 5 inventory)
-        sell_order_id = create_order(
+        sell_order_id, _, _ = create_order(
             participant_id=seller_id,
             game_id=1,
             order_type="LIMIT",
@@ -273,8 +271,8 @@ def test_no_match_price_mismatch(app):
             initial_quantity=5,
         )
 
-        # Buyer places BUY LIMIT at $10 for 5 units (below seller's ask, reserves $50 cash)
-        buy_order_id = create_order(
+        # Buyer places BUY LIMIT at $10 for 5 units (below seller's ask, no match)
+        buy_order_id, num_fills, error = create_order(
             participant_id=buyer_id,
             game_id=1,
             order_type="LIMIT",
@@ -282,6 +280,8 @@ def test_no_match_price_mismatch(app):
             price=10.0,
             initial_quantity=5,
         )
+        assert error is False
+        assert num_fills == 0
 
         # Match the new buy order
         try_match_order(buy_order_id)

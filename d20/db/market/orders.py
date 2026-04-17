@@ -62,20 +62,16 @@ def create_order(
         increment_reserved_quantity(participant_id, game_id, initial_quantity)
     else:  # side == "BUY"
         # For BUY orders, reserve cash
-        # Use worst-case price for MARKET orders (assume max reasonable price)
-        if order_type == "MARKET":
-            # For market orders, require enough cash for a reasonable upper bound
-            # In practice, this should be validated at the route level
-            required_cash = initial_quantity * 1000.0  # Arbitrary high price
-        else:
+        # WE DO NOT CHECK FOR MARKET ORDER VIABILITY HERE THAT WILL BE CHECKED IN TRY_MATCH
+        if order_type == "LIMIT":
             required_cash = initial_quantity * price
 
-        if participant["availiable_cash"] < required_cash:
-            raise ValueError(
-                f"Cannot buy {initial_quantity} units at ${price}. Only ${participant['availiable_cash']:.2f} available."
-            )
-        decrement_available_cash(participant_id, required_cash)
-        increment_reserved_cash(participant_id, required_cash)
+            if participant["availiable_cash"] < required_cash:
+                raise ValueError(
+                    f"Cannot buy {initial_quantity} units at ${price}. Only ${participant['availiable_cash']:.2f} available."
+                )
+            decrement_available_cash(participant_id, required_cash)
+            increment_reserved_cash(participant_id, required_cash)
 
     # Create the order record
     db = get_db()
@@ -98,11 +94,17 @@ def create_order(
         ),
     )
     db.commit()
-    return cursor.lastrowid
+    order_id = cursor.lastrowid
+    num_fills, error = try_match_order(order_id)
+    return order_id, num_fills, error
 
 
 def try_match_order(order_id):
-    """Used for a newly created order to try to match it with an order of the other side"""
+    """
+    Used for a newly created order to try to match it with an order of the other side
+    Returns (number of fills done, error)
+    an error is only returned if the order is a market buy order and the user doesn't have enough cash
+    """
     order = get_order(order_id)
     game_id = order["game_id"]
     side = order["side"]
@@ -115,7 +117,7 @@ def try_match_order(order_id):
     else:
         possible_matches = get_buy_orders(game_id)
         price_is_matching = operator.le
-    # We simulate a market order with an order with the most flexible price range possible
+    # Simulate a market order with an order with the most flexible price range possible
     # The price limit is the price that needs to match
     order_type = order["order_type"]
     if order_type == "MARKET":
@@ -126,10 +128,9 @@ def try_match_order(order_id):
     else:
         price_limit = order["price"]
 
-    # The total matches needed for completion
     remaining_matches_for_completion = order["initial_quantity"]
-    # match all that match until the quantity is fulfilled or no more matches can be considered
     matches = []
+    # match all that match until the quantity is fulfilled or no more matches can be considered
     for possible_match in possible_matches:
         match_price = possible_match["price"]
         remaining_quantity_for_possible_match = (
@@ -150,10 +151,16 @@ def try_match_order(order_id):
                 remaining_matches_for_completion = 0
                 break
 
+    # Record wether the order is a MARKET BUY for special processing of available cash
+    # In all other cases either cash or inventory has been verified
+    market_buy = order_type == "MARKET" and side == "BUY"
+
     # if all requested quantity is handled the it's a complete order otherwise its a partial order
     # all fills then need to go towards updating the rows and need to be added to history
     # we have like a list of fills that happened (which can also be empty and probabbly won't be too long)
     total_fills = 0
+    if order_type == "MARKET" and side == "BUY":
+        participant = get_market_participant(order["participant_id"])
     for matched_order_id, num_fills in matches:
         # We need to set transfer direction based on wether this was a buy or sell order
         if side == "BUY":
@@ -177,8 +184,16 @@ def try_match_order(order_id):
         execution_price = matched_order["price"]
         total_cost = execution_price * num_fills
         # Money updated
-        increment_available_cash(seller, total_cost)
-        decrement_reserved_cash(buyer, total_cost)
+        if not market_buy:
+            increment_available_cash(seller, total_cost)
+            decrement_reserved_cash(buyer, total_cost)
+        else:
+            try:
+                decrement_available_cash(buyer, total_cost)
+                increment_available_cash(seller, total_cost)
+            except ValueError as _:
+                # The user who placed the market buy order does not have enough cash
+                return total_fills, True
 
         # A trade is added to history
         if side == "BUY":
@@ -195,7 +210,7 @@ def try_match_order(order_id):
     if order_type == "MARKET" and remaining_matches_for_completion > 0:
         cancel_order(order_id)
 
-    return total_fills
+    return total_fills, False
 
 
 def get_order(order_id):
