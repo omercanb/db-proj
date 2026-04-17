@@ -24,6 +24,7 @@ def create_app(test_config=None):
 
     app.cli.add_command(seed.seed_db_command)
     # ensure the instance folder exists
+    add_date_prettify(app)
     os.makedirs(app.instance_path, exist_ok=True)
 
     # a simple page that says hello
@@ -58,3 +59,12 @@ def create_app(test_config=None):
     app.add_url_rule("/", endpoint="index")
 
     return app
+
+
+def add_date_prettify(app):
+    @app.template_filter("pretty_date")
+    def pretty_date(value):
+        from datetime import datetime
+
+        dt = datetime.fromisoformat(value)
+        return dt.strftime("%d %b %Y, %H:%M:%S")

@@ -13,11 +13,17 @@ from flask import (
 
 from d20.db.game import get_game, get_games
 from d20.db.market.market_participant import (
+    decrement_available_cash,
     get_market_participant,
     get_market_participant_by_customer,
     get_market_participant_by_store,
     increment_available_cash,
-    decrement_available_cash,
+)
+from d20.db.market.orders import (
+    cancel_order,
+    get_active_orders_by_participant,
+    get_inactive_orders_by_participant,
+    get_orders_by_participant,
 )
 from d20.db.market.participant_inventory import (
     create_participant_inventory,
@@ -75,18 +81,24 @@ def account():
             account_remove_available()
         elif action == "remove_inventory":
             account_remove_inventory()
+        elif action == "cancel_order":
+            account_cancel_order()
 
         return redirect(url_for("market.account"))
 
     participant_id = g.market_participant["id"]
     inventory = get_participant_inventory(participant_id)
     all_games = get_games()
+    user_orders = get_active_orders_by_participant(participant_id)
+    previous_orders = get_inactive_orders_by_participant(participant_id)
 
     return render_template(
         "market/account.html",
         participant=g.market_participant,
         inventory=inventory,
         all_games=all_games,
+        user_orders=user_orders,
+        previous_orders=previous_orders,
     )
 
 
@@ -199,3 +211,12 @@ def account_remove_inventory():
             flash("Game removed from inventory.")
         except Exception as e:
             flash(f"Error removing game: {str(e)}")
+
+
+def account_cancel_order():
+    order_id = request.form.get("order_id", type=int)
+    try:
+        cancel_order(order_id)
+        flash("Order cancelled.")
+    except Exception as e:
+        flash(f"Error cancelling order: {str(e)}")

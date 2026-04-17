@@ -53,7 +53,8 @@ create table 'Table' (
 
 create table Game (
     id integer primary key autoincrement,
-    name text not null unique
+    name text not null unique,
+    symbol text not null unique
 );
 
 create table GameCopy (
@@ -144,6 +145,7 @@ create table Orders (
     id integer primary key,
     participant_id integer not null,
     game_id integer not null,
+    game_symbol text not null,
     order_type text check (order_type in ('LIMIT', 'MARKET')) not null,
     side text check (side in ('BUY', 'SELL')) not null,
     -- The constraint on price is because market orders should have no price (they execute at a specific price and that is in the history)

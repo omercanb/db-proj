@@ -1,8 +1,10 @@
 import operator
 from datetime import datetime
+from typing import Literal
 
 from d20.db import get_db
-from d20.db.market.market_history import create_trade
+from d20.db.game import get_game
+from d20.db.market.market_history import record_trade
 from d20.db.market.market_participant import (
     decrement_available_cash,
     decrement_reserved_cash,
@@ -19,7 +21,14 @@ from d20.db.market.participant_inventory import (
 )
 
 
-def create_order(participant_id, game_id, order_type, side, price, initial_quantity):
+def create_order(
+    participant_id,
+    game_id,
+    order_type: Literal["LIMIT", "MARKET"],
+    side: Literal["BUY", "SELL"],
+    price,
+    initial_quantity,
+):
     """Create a new order and reserve the required cash or inventory.
 
     Args:
@@ -44,13 +53,10 @@ def create_order(participant_id, game_id, order_type, side, price, initial_quant
     if side == "SELL":
         # For SELL orders, reserve inventory
         inventory = get_participant_inventory_for_game(participant_id, game_id)
-        if not inventory:
+        current_available = inventory["available_quantity"] if inventory else 0
+        if current_available < initial_quantity:
             raise ValueError(
-                f"Participant {participant_id} has no inventory for game {game_id}"
-            )
-        if inventory["available_quantity"] < initial_quantity:
-            raise ValueError(
-                f"Cannot sell {initial_quantity} units. Only {inventory['available_quantity']} available."
+                f"Cannot sell {initial_quantity} units. Only {current_available} available."
             )
         decrement_available_quantity(participant_id, game_id, initial_quantity)
         increment_reserved_quantity(participant_id, game_id, initial_quantity)
@@ -73,13 +79,15 @@ def create_order(participant_id, game_id, order_type, side, price, initial_quant
 
     # Create the order record
     db = get_db()
+    game_symbol = get_game(game_id)["symbol"]  # The symbol name that's traded
     cursor = db.execute(
         """insert into Orders
-           (participant_id, game_id, order_type, side, price, initial_quantity, filled_quantity, status, created_at)
-           values (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           (participant_id, game_id, game_symbol, order_type, side, price, initial_quantity, filled_quantity, status, created_at)
+           values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             participant_id,
             game_id,
+            game_symbol,
             order_type,
             side,
             price,
@@ -179,7 +187,7 @@ def try_match_order(order_id):
         else:
             buy_order_id = matched_order_id
             sell_order_id = order_id
-        create_trade(
+        record_trade(
             buy_order_id, sell_order_id, buyer, seller, execution_price, num_fills
         )
 
@@ -195,6 +203,28 @@ def get_orders_by_participant(participant_id):
         get_db()
         .execute(
             "select * from Orders where participant_id = ? order by created_at desc",
+            (participant_id,),
+        )
+        .fetchall()
+    )
+
+
+def get_active_orders_by_participant(participant_id):
+    return (
+        get_db()
+        .execute(
+            "select * from Orders where participant_id = ? and status in ('OPEN', 'PARTIAL') order by created_at desc",
+            (participant_id,),
+        )
+        .fetchall()
+    )
+
+
+def get_inactive_orders_by_participant(participant_id):
+    return (
+        get_db()
+        .execute(
+            "select * from Orders where participant_id = ? and status not in ('OPEN', 'PARTIAL') order by created_at desc",
             (participant_id,),
         )
         .fetchall()

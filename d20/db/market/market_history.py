@@ -3,7 +3,7 @@ from datetime import datetime
 from d20.db import get_db
 
 
-def create_trade(
+def record_trade(
     buy_order_id, sell_order_id, buyer_id, seller_id, execution_price, quantity
 ):
     """Record a completed trade (fill).

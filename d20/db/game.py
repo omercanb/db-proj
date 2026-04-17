@@ -2,11 +2,11 @@ from d20.db import get_db
 
 
 # Game Functions
-def create_game(name):
+def create_game(name, symbol):
     db = get_db()
     cursor = db.execute(
-        f"insert into Game (name) values (?)",
-        (name,),
+        f"insert into Game (name, symbol) values (?, ?)",
+        (name, symbol),
     )
     db.commit()
     return cursor.lastrowid

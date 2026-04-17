@@ -13,14 +13,12 @@ from d20.db.market.participant_inventory import (
 
 
 def make_participants(game_id=1):
-    """Create buyer and seller with initial cash and inventory."""
+    """Create buyer and seller with initial cash. Inventory auto-creates on first order."""
     buyer_id = create_market_participant(customer_id=1, available_cash=100000.0)
     seller_id = create_market_participant(customer_id=2, available_cash=0.0)
+    # Pre-create seller inventory with 10 available units
     create_participant_inventory(
         seller_id, game_id, available_quantity=10, reserved_quantity=0
-    )
-    create_participant_inventory(
-        buyer_id, game_id, available_quantity=0, reserved_quantity=0
     )
     return buyer_id, seller_id
 
@@ -298,8 +296,11 @@ def test_no_match_price_mismatch(app):
         # Verify no inventory transferred
         buyer_inv = get_participant_inventory_for_game(buyer_id, 1)
         seller_inv = get_participant_inventory_for_game(seller_id, 1)
-        assert buyer_inv["available_quantity"] == 0
+        # Buyer should have no inventory entry (never received goods)
+        assert buyer_inv is None
+        # Seller should still have all 5 reserved
         assert seller_inv["reserved_quantity"] == 5
+        assert seller_inv["available_quantity"] == 5
 
         # Verify no trades
         trades = get_trades_by_participant(buyer_id)

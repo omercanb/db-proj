@@ -86,24 +86,28 @@
                     <h2 class="card-section-title">Market Inventory</h2>
                     <!-- Inventory Table -->
                     {% if inventory %}
-                        <div class="session-list">
-                            <div class="inventory-header">
-                                <div>Game</div>
-                                <div>Available</div>
-                                <div>Reserved</div>
-                                <div>Total</div>
-                            </div>
-                            {% for item in inventory %}
-                                <div class="inventory-row">
-                                    <div>
-                                        <strong>{{ item['name'] }}</strong>
-                                    </div>
-                                    <div>{{ item['available_quantity'] }}</div>
-                                    <div>{{ item['reserved_quantity'] }}</div>
-                                    <div>{{ item['available_quantity'] + item['reserved_quantity'] }}</div>
-                                </div>
-                            {% endfor %}
-                        </div>
+                        <table class="table">
+                            <thead class="table-success">
+                                <tr>
+                                    <th>Game</th>
+                                    <th>Available</th>
+                                    <th>Reserved</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in inventory %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ item['name'] }}</strong>
+                                        </td>
+                                        <td>{{ item['available_quantity'] }}</td>
+                                        <td>{{ item['reserved_quantity'] }}</td>
+                                        <td>{{ item['available_quantity'] + item['reserved_quantity'] }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     {% else %}
                         <p class="text-muted">No games in your market inventory.</p>
                     {% endif %}
@@ -186,6 +190,99 @@
                         </script>
                     {% else %}
                         <p class="text-muted">No available copies to remove.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+        <!-- Your Orders Section -->
+        <section class="mt-4">
+            <div class="row">
+                <div class="col">
+                    <h2 class="card-section-title">Pending Orders</h2>
+                    <!-- Inventory Table -->
+                    {% if user_orders %}
+                        <table class="table">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Side</th>
+                                    <th>Game</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Total Price</th>
+                                    <th>Fills</th>
+                                    <th>Remaining</th>
+                                    <th>Date</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in user_orders %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ item['side'] }}</strong>
+                                        </td>
+                                        <td>{{ item['game_symbol'] }}</td>
+                                        <td>{{ item['initial_quantity'] }}</td>
+                                        <td>${{ item['price'] }}</td>
+                                        <td>${{ item['price'] * item['initial_quantity'] }}</td>
+                                        <td>{{ item['filled_quantity'] }}</td>
+                                        <td>{{ item['initial_quantity'] - item['filled_quantity'] }}</td>
+                                        <td>{{ item['created_at'] | pretty_date }}</td>
+                                        <td>
+                                            <form method="post">
+                                                <input type="hidden" name="action" value="cancel_order">
+                                                <input type="hidden" name="order_id" value="{{ item['id'] }}">
+                                                <button type="submit" class="btn btn-sm btn-danger">Cancel</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="text-muted">No pending orders.</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <h2 class="card-section-title">Previous Orders</h2>
+                    <!-- Inventory Table -->
+                    {% if previous_orders %}
+                        <table class="table">
+                            <thead class="table-secondary">
+                                <tr>
+                                    <th>Side</th>
+                                    <th>Game</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Total Price</th>
+                                    <th>Fills</th>
+                                    <th>Remaining</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in previous_orders %}
+                                    <tr>
+                                        <td class="text-muted">
+                                            <strong>{{ item['side'] }}</strong>
+                                        </td>
+                                        <td class="text-muted">{{ item['game_symbol'] }}</td>
+                                        <td class="text-muted">{{ item['initial_quantity'] }}</td>
+                                        <td class="text-muted">${{ item['price'] }}</td>
+                                        <td class="text-muted">${{ item['price'] * item['initial_quantity'] }}</td>
+                                        <td class="text-muted">{{ item['filled_quantity'] }}</td>
+                                        <td class="text-muted">{{ item['initial_quantity'] - item['filled_quantity'] }}</td>
+                                        <td class="text-muted">{{ item['created_at'] | pretty_date }}</td>
+                                        <td class="text-muted">{{ item['status'] }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="text-muted">No pending orders.</p>
                     {% endif %}
                 </div>
             </div>
