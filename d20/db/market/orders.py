@@ -108,6 +108,7 @@ def try_match_order(order_id):
     """Set up before finding matches"""
     order = get_order(order_id)
     game_id = order["game_id"]
+    game_symbol = get_game(game_id)["symbol"]
     side = order["side"]
     # buys match with sell and sells match with buy
     # fetch the opposite order type (sorted increasing for buys and decreasing for sells (plus earliness))
@@ -206,8 +207,15 @@ def try_match_order(order_id):
         else:
             buy_order_id = matched_order_id
             sell_order_id = order_id
+
         record_trade(
-            buy_order_id, sell_order_id, buyer, seller, execution_price, num_fills
+            buy_order_id,
+            sell_order_id,
+            buyer,
+            seller,
+            game_symbol,
+            execution_price,
+            num_fills,
         )
 
     # If we have a market order and don't have enough liqudity we fill what we can then cancel the order

@@ -1,0 +1,17 @@
+<ul class="nav nav-tabs mt-4" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'portfolio' %}active{% endif %}"
+           href="{{ url_for('market.portfolio') }}"
+           role="tab">Portfolio</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'trading' %}active{% endif %}"
+           href="{{ url_for('market.trading') }}"
+           role="tab">Trading</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {% if active_tab == 'history' %}active{% endif %}"
+           href="{{ url_for('market.history') }}"
+           role="tab">History</a>
+    </li>
+</ul>

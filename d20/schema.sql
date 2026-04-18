@@ -168,6 +168,7 @@ create table MarketHistory (
     sell_order_id integer not null,
     buyer_id integer not null,
     seller_id integer not null,
+    game_symbol text not null,
     execution_price decimal(10, 2) not null,
     quantity integer not null,
     executed_at text not null,

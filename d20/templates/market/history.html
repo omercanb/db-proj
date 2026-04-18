@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block header %}
+    <h1>
+        {% block title %}Trading Account - History{% endblock %}
+    </h1>
+{% endblock %}
+{% block content %}
+    <div class="container">
+        {% include 'market/_subnav.html' %}
+        <!-- PREVIOUS ORDERS SECTION -->
+        <section class="mt-4">
+            <div class="row">
+                <div class="col">
+                    <h2 class="card-section-title">Previous Orders</h2>
+                    {% if previous_orders %}
+                        <table class="table">
+                            <thead class="table-info">
+                                <tr>
+                                    <th>Side</th>
+                                    <th>Game</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Total Price</th>
+                                    <th>Fills</th>
+                                    <th>Remaining</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in previous_orders %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ item['side'] }}</strong>
+                                        </td>
+                                        <td>{{ item['game_symbol'] }}</td>
+                                        <td>{{ item['initial_quantity'] }}</td>
+                                        <td>${{ 'Market' if item['price'] == None else item['price'] }}</td>
+                                        <td>${{ 'Market' if item['price'] == None else (item['price'] * item['initial_quantity']) }}</td>
+                                        <td>{{ item['filled_quantity'] }}</td>
+                                        <td>{{ item['initial_quantity'] - item['filled_quantity'] }}</td>
+                                        <td>{{ item['created_at'] | pretty_date }}</td>
+                                        <td>{{ item['status'] }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="text-muted">No previous orders.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+        <!-- MARKET HISTORY SECTION -->
+        <section class="mt-4">
+            <div class="row">
+                <div class="col">
+                    <h2 class="card-section-title">Market History</h2>
+                    {% if trades %}
+                        <table class="table">
+                            <thead class="table-success">
+                                <tr>
+                                    <th>Game</th>
+                                    <th>Quantity</th>
+                                    <th>Execution Price</th>
+                                    <th>Total Price</th>
+                                    <th>Buyer</th>
+                                    <th>Seller</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in trades %}
+                                    <tr>
+                                        <td>{{ item['game_symbol'] }}</td>
+                                        <td>{{ item['quantity'] }}</td>
+                                        <td>${{ 'Market' if item['execution_price'] == None else item['execution_price'] }}</td>
+                                        <td>${{ 'Market' if item['execution_price'] == None else (item['execution_price'] * item['quantity']) }}</td>
+                                        <td>ID_{{ item['buyer_id'] }}</td>
+                                        <td>ID_{{ item['seller_id'] }}</td>
+                                        <td>{{ item['executed_at'] | pretty_date }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </table>
+                        {% else %}
+                            <p class="text-muted">No Previous Trades</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+        </div>
+    {% endblock %}
