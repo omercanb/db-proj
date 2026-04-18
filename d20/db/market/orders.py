@@ -105,12 +105,14 @@ def try_match_order(order_id):
     Returns (number of fills done, error)
     an error is only returned if the order is a market buy order and the user doesn't have enough cash
     """
+    """Set up before finding matches"""
     order = get_order(order_id)
     game_id = order["game_id"]
     side = order["side"]
     # buys match with sell and sells match with buy
     # fetch the opposite order type (sorted increasing for buys and decreasing for sells (plus earliness))
     if side == "BUY":
+        # TODO only get active orders
         possible_matches = get_sell_orders(game_id)
         # price is matching is a comparator function to be later used to check against possible matching prices
         price_is_matching = operator.ge
@@ -128,6 +130,7 @@ def try_match_order(order_id):
     else:
         price_limit = order["price"]
 
+    """Finding Matches"""
     remaining_matches_for_completion = order["initial_quantity"]
     matches = []
     # match all that match until the quantity is fulfilled or no more matches can be considered
@@ -151,6 +154,7 @@ def try_match_order(order_id):
                 remaining_matches_for_completion = 0
                 break
 
+    """Executing Matches"""
     # Record wether the order is a MARKET BUY for special processing of available cash
     # In all other cases either cash or inventory has been verified
     market_buy = order_type == "MARKET" and side == "BUY"
@@ -264,7 +268,7 @@ def get_orders_by_participant_and_game(participant_id, game_id):
     )
 
 
-def get_open_orders(participant_id=None):
+def get_active_orders(participant_id=None):
     """Get all OPEN or PARTIAL orders. If participant_id is provided, only their orders."""
     if participant_id:
         return (
@@ -377,14 +381,35 @@ def add_fills(order_id, quantity_to_add):
 
 
 def cancel_order(order_id):
-    """Cancel an order."""
+    """Cancel an order and return reserved resources."""
     db = get_db()
+    order = get_order(order_id)
+    status = order["status"]
+    assert status != "COMPLETED"
+    participant_id = order["participant_id"]
+    remaining_quantity = order["initial_quantity"] - order["filled_quantity"]
+    side = order["side"]
+    order_type = order["order_type"]
+
+    if side == "BUY":
+        # Only LIMIT orders have reserved cash (MARKET orders don't reserve upfront)
+        if order_type == "LIMIT":
+            price = order["price"]
+            total_cost = remaining_quantity * price
+            decrement_reserved_cash(participant_id, total_cost)
+            increment_available_cash(participant_id, total_cost)
+    else:  # side == "SELL"
+        game_id = order["game_id"]
+        decrement_reserved_quantity(participant_id, game_id, remaining_quantity)
+        increment_available_quantity(participant_id, game_id, remaining_quantity)
+
     db.execute("update Orders set status = 'CANCELLED' where id = ?", (order_id,))
     db.commit()
 
 
-def delete_order(order_id):
-    """Delete an order."""
-    db = get_db()
-    db.execute("delete from Orders where id = ?", (order_id,))
-    db.commit()
+# def delete_order(order_id):
+#     assert false
+#     """Delete an order."""
+#     db = get_db()
+#     db.execute("delete from Orders where id = ?", (order_id,))
+#     db.commit()

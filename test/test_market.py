@@ -5,7 +5,7 @@ from d20.db.market.market_participant import (
     create_market_participant,
     get_market_participant,
 )
-from d20.db.market.orders import create_order, get_order, try_match_order
+from d20.db.market.orders import cancel_order, create_order, get_order, try_match_order
 from d20.db.market.participant_inventory import (
     create_participant_inventory,
     get_participant_inventory_for_game,
@@ -169,7 +169,6 @@ def test_market_buy_matches_sell(app):
         assert trades[0]["execution_price"] == 8.0
 
 
-
 def test_market_sell_matches_buy(app):
     """Seller MARKET order matches buyer BUY LIMIT. Execution at buyer's price."""
     with app.app_context():
@@ -306,3 +305,69 @@ def test_no_match_price_mismatch(app):
         # Verify no trades
         trades = get_trades_by_participant(buyer_id)
         assert len(trades) == 0
+
+
+def test_cancel_buy_order(app):
+    """Cancel a BUY order returns reserved cash to available."""
+    with app.app_context():
+        buyer_id, seller_id = make_participants()
+
+        # Buyer places BUY LIMIT at $10 for 5 units (reserves $50 cash)
+        buy_order_id, _, _ = create_order(
+            participant_id=buyer_id,
+            game_id=1,
+            order_type="LIMIT",
+            side="BUY",
+            price=10.0,
+            initial_quantity=5,
+        )
+
+        # Verify cash is reserved
+        buyer_before = get_market_participant(buyer_id)
+        assert buyer_before["availiable_cash"] == 100000.0 - 50.0  # 50 reserved
+        assert buyer_before["reserved_cash"] == 50.0
+
+        # Cancel the order
+        cancel_order(buy_order_id)
+
+        # Verify order is cancelled
+        buy = get_order(buy_order_id)
+        assert buy["status"] == "CANCELLED"
+
+        # Verify cash is returned to available
+        buyer_after = get_market_participant(buyer_id)
+        assert buyer_after["availiable_cash"] == 100000.0  # All available again
+        assert buyer_after["reserved_cash"] == 0.0
+
+
+def test_cancel_sell_order(app):
+    """Cancel a SELL order returns reserved inventory to available."""
+    with app.app_context():
+        buyer_id, seller_id = make_participants()
+
+        # Seller places SELL LIMIT at $10 for 5 units (reserves 5 inventory)
+        sell_order_id, _, _ = create_order(
+            participant_id=seller_id,
+            game_id=1,
+            order_type="LIMIT",
+            side="SELL",
+            price=10.0,
+            initial_quantity=5,
+        )
+
+        # Verify inventory is reserved
+        seller_inv_before = get_participant_inventory_for_game(seller_id, 1)
+        assert seller_inv_before["available_quantity"] == 5  # 10 - 5 reserved
+        assert seller_inv_before["reserved_quantity"] == 5
+
+        # Cancel the order
+        cancel_order(sell_order_id)
+
+        # Verify order is cancelled
+        sell = get_order(sell_order_id)
+        assert sell["status"] == "CANCELLED"
+
+        # Verify inventory is returned to available
+        seller_inv_after = get_participant_inventory_for_game(seller_id, 1)
+        assert seller_inv_after["available_quantity"] == 10  # All available again
+        assert seller_inv_after["reserved_quantity"] == 0
