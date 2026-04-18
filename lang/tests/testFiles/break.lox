@@ -1,0 +1,26 @@
+print("Break without new block, print to 3");
+for (var i = 0; i < 10; i = i + 1) {
+    print(i);
+    if (i == 3) break;
+}
+
+print("Break inside new block, print to 3");
+
+for (var i = 0; i < 10; i = i + 1) {
+    print(i);
+    if (i == 3) {
+        break;
+        print("Shouldnt print this");
+    }
+}
+
+print("Break inside deep nested block, print to 3");
+for (var i = 0; i < 10; i = i + 1) {
+    print(i);
+    if (i == 3) {
+        {
+            break;
+        }
+        print("Shouldnt print this");
+    }
+}

@@ -1,16 +1,38 @@
-Selam gang,
+# Selam gang
 
-Çalıştırmak için 
-    flask -A d20 run --debug \
-    (debug modda çalıştırınca exceptionlar daha net gözüküyor, yoksa şart değil)
+Flask ve dependencyleri yüklemek için
 
-Çalıştırmadan önce
-     flask --app d20 init-db \
-     flask --app d20 seed \
-     ya da direkt birlikte \
-        flask --app d20 init-db && flask --app d20 seed
+```bash
+pip install -e .
+```
 
-    Bunlar şunu yapıyor, init-db schema.sql'ı runlıyor. seed de db'yi dolduruyor. Seed diye bir functionımız tanımlı, oraya yeni eklenen her feature için bir örnek veri koymak lazım. Oyunlar falan da burada yaratılıyor. Bu 'flask --app d20' da flaskin cli commandleri çalıştırma yöntemi ama biraz uzun yazması. Ondan burdan kopyalamak makul.
+Dili (lang klasöründeki) yüklemek için
 
+```bash
+pip install -e ./lang
+```
 
+## Init
 
+Uygulamayı çalıştırmadan önce dbyi init ve seed yapıyoruz
+
+```bash
+flask --app d20 init-db && flask --app d20 seed
+```
+
+Ya da ayrı ayrı:
+
+```bash
+flask --app d20 init-db
+flask --app d20 seed
+```
+
+`init-db` komutu `schema.sql`ı çalıştırıyor `seed` de örnek veri ekliyor, her yeni feature içın `seed` fonksiyonuyla bir örenk veri eklemek lazım. Örnek oyun isimleri de burda yaratılıyor.
+
+## Run
+
+```bash
+flask --app d20 run --debug
+```
+
+> Debug modda çalıştırınca exceptionlar daha net gözüküyor, yoksa şart değil.

@@ -1,0 +1,27 @@
+print("Test continue without new block, print to three except 2");
+for (var i = 0; i < 4; i = i + 1) {
+    if (i == 2) continue;
+    print(i);
+}
+
+
+print("Test continue in new block, print to three except 2");
+for (var i = 0; i < 4; i = i + 1) {
+    if (i == 2) { 
+        continue;
+        print("Shouldn't print this");
+    }
+    print(i);
+}
+
+
+print("Test continue in nested block, print to three except 2");
+for (var i = 0; i < 4; i = i + 1) {
+    if (i == 2) {
+        {
+            continue;
+        }
+        print("Shouldn't print this");
+    }
+    print(i);
+}

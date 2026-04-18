@@ -1,0 +1,21 @@
+print("Testing regular for");
+for (var i = 0; i < 3; i = i + 1) {
+    print(i);
+}
+
+print("Testing for without initializer and condition");
+var a = 0;
+for (; a < 3;) {
+    print(a);
+    a = a + 1;
+}
+
+print("Testing with the fibonacci numbers");
+var prev = 0;
+var cur = 1;
+for (var i = 0; i < 1000; i = i + 1) {
+    print(cur);
+    var temp = cur;
+    cur = cur + prev;
+    prev = temp;
+}

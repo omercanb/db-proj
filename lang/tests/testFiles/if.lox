@@ -1,0 +1,7 @@
+var a = 5;
+if (a == 5) print("a is 5");
+if (a == 5) {
+    print("a is five in a block");
+    print("this is the block");
+}
+if (a != 5) {print("this should not show");} else {print("else is working");}
