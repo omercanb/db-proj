@@ -12,6 +12,7 @@ drop table if exists MarketPariticipant;
 drop table if exists MarketParticipantInventory;
 drop table if exists Orders;
 drop table if exists MarketHistory;
+drop table if exists TradingScript;
 
 -- CREATE TABLE post (
 --   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -154,7 +155,9 @@ create table Orders (
     initial_quantity integer not null,
     filled_quantity integer not null,
     status text check (status in ('OPEN', 'PARTIAL', 'COMPLETED', 'CANCELLED')),
-    created_at text not null -- TODO is there a default value for this in sqlite
+    created_at text not null, 
+    script_id integer default null,
+    foreign key (script_id) references TradingScript(id)
 );
  -- TODO create index on status for faster queries for open and partial
 
@@ -177,4 +180,12 @@ create table MarketHistory (
     foreign key (sell_order_id) references Orders(id),
     foreign key (buyer_id) references MarketPariticipant(id),
     foreign key (seller_id) references MarketPariticipant(id)
-)
+);
+
+create table TradingScript(
+    id integer primary key,
+    name text not null,
+    code text not null,
+    owner_id integer not null,
+    foreign key (owner_id) references MarketPariticipant(id)
+);

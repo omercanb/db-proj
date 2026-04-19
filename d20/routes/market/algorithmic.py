@@ -5,7 +5,15 @@ from flask import g, jsonify, render_template, request
 from plox.runner import LoxRunner
 
 from d20.db.game import InvalidSymbolError
+from d20.db.market.orders import get_orders_by_script
 from d20.db.market.participant_inventory import get_participant_inventory
+from d20.db.market.trading_scripts import (
+    create_script,
+    delete_script,
+    get_script,
+    get_scripts_by_owner,
+    update_script,
+)
 from d20.routes.market import market_api
 
 from . import bp, market_login_required
@@ -16,12 +24,14 @@ from . import bp, market_login_required
 def algorithmic():
     participant_id = g.market_participant["id"]
     inventory = get_participant_inventory(participant_id)
+    scripts = get_scripts_by_owner(participant_id)
 
     return render_template(
         "market/algorithmic.html",
         active_tab="algorithmic",
         participant=g.market_participant,
         inventory=inventory,
+        scripts=scripts,
     )
 
 
@@ -30,9 +40,12 @@ def algorithmic():
 def algorithmic_run():
     """Execute algorithmic trading code and return results as JSON."""
     code = request.json.get("code", "")
+    script_id = request.json.get("script_id")
     participant_id = g.market_participant["id"]
+    script = get_script(script_id)
+    update_script(script_id, script["name"], code)
 
-    output, err = run_plox_and_capture(code)
+    output, err = run_plox_and_capture(code, script_id)
     if err:
         result = {
             "success": False,
@@ -49,11 +62,106 @@ def algorithmic_run():
     return jsonify(result)
 
 
-def run_plox_and_capture(code):
+@bp.route("/algorithmic/scripts", methods=("POST",))
+@market_login_required
+def create_script_endpoint():
+    """Create a new trading script."""
+    participant_id = g.market_participant["id"]
+    data = request.json
+    name = data.get("name", "Untitled Script")
+    code = data.get("code", "")
+
+    try:
+        script_id = create_script(participant_id, name, code)
+        script = get_script(script_id)
+        return jsonify({"success": True, "script": dict(script)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@bp.route("/algorithmic/scripts/<int:script_id>", methods=("GET",))
+@market_login_required
+def get_script_endpoint(script_id):
+    """Get a script by ID."""
+    script = get_script(script_id)
+    if not script:
+        return jsonify({"success": False, "error": "Script not found"}), 404
+
+    # Verify ownership
+    if script["owner_id"] != g.market_participant["id"]:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+
+    return jsonify({"success": True, "script": dict(script)})
+
+
+@bp.route("/algorithmic/scripts/<int:script_id>", methods=("PUT",))
+@market_login_required
+# Save script
+def update_script_endpoint(script_id):
+    """Update a script's name and code."""
+    script = get_script(script_id)
+    if not script:
+        return jsonify({"success": False, "error": "Script not found"}), 404
+
+    # Verify ownership
+    if script["owner_id"] != g.market_participant["id"]:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+
+    data = request.json
+    name = data.get("name", script["name"])
+    code = data.get("code", script["code"])
+
+    try:
+        update_script(script_id, name, code)
+        updated_script = get_script(script_id)
+        return jsonify({"success": True, "script": dict(updated_script)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@bp.route("/algorithmic/scripts/<int:script_id>", methods=("DELETE",))
+@market_login_required
+def delete_script_endpoint(script_id):
+    """Delete a script."""
+    script = get_script(script_id)
+    if not script:
+        return jsonify({"success": False, "error": "Script not found"}), 404
+
+    # Verify ownership
+    if script["owner_id"] != g.market_participant["id"]:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+
+    try:
+        delete_script(script_id)
+        return jsonify({"success": True, "message": "Script deleted"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@bp.route("/algorithmic/scripts/orders/<int:script_id>", methods=("GET",))
+@market_login_required
+def get_script_orders(script_id):
+    script = get_script(script_id)
+    if not script:
+        return jsonify({"success": False, "error": "Script not found"}), 404
+
+    # Verify ownership
+    if script["owner_id"] != g.market_participant["id"]:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+
+    orders = get_orders_by_script(script_id)
+    if orders:
+        orders = [dict(order) for order in orders]
+        return jsonify({"success": True, "data": orders})
+    else:
+        return jsonify({"success": False, "error": "An error occured."}), 500
+
+
+def run_plox_and_capture(code, script_id):
     runner = LoxRunner()
     runner.add_builtin("get_price", market_api.GetPrice())
-    runner.add_builtin("market_buy", market_api.MarketBuy())
-    runner.add_builtin("market_sell", market_api.MarketSell())
+    runner.add_builtin("market_buy", market_api.MarketBuy(script_id))
+    runner.add_builtin("market_sell", market_api.MarketSell(script_id))
     with redirect_stdout(io.StringIO()) as stdout:
         with redirect_stderr(io.StringIO()) as stderr:
             try:

@@ -41,76 +41,316 @@
                 </div>
             </div>
         </section>
-        <!-- CODE EDITOR AND OUTPUT -->
+        <!-- SCRIPTS AND CODE EDITOR -->
         <section class="mt-4">
             <h2 class="card-section-title">Algorithmic Trading</h2>
             <div class="row">
-                <!-- LEFT COLUMN: CODE EDITOR -->
-                <div class="col-6">
-                    <h3>Trading Code</h3>
-                    <form id="algo-form">
-                        <div class="form-group">
+                <!-- LEFT COLUMN: SCRIPTS LIST -->
+                <div class="col-3">
+                    <h3>Your Scripts</h3>
+                    <div class="list-group"
+                         id="scripts-list"
+                         style="max-height: 500px;
+                                overflow-y: auto">
+                        {% if scripts %}
+                            {% for script in scripts %}
+                                <button type="button"
+                                        class="list-group-item list-group-item-action script-item"
+                                        data-script-id="{{ script['id'] }}">{{ script['name'] }}</button>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted p-2">No scripts yet</p>
+                        {% endif %}
+                    </div>
+                    <div class="mt-3">
+                        <button id="new-script-btn" class="btn btn-success btn-sm w-100">New Script</button>
+                    </div>
+                    <div id="script-actions" style="display: none;" class="mt-2">
+                        <button id="rename-script-btn" class="btn btn-warning btn-sm w-100">Rename</button>
+                        <button id="delete-script-btn" class="btn btn-danger btn-sm w-100 mt-2">Delete</button>
+                    </div>
+                </div>
+                <!-- MIDDLE/RIGHT COLUMN: CODE EDITOR AND OUTPUT -->
+                <div class="col-9">
+                    <!-- Script name display -->
+                    <h3 id="current-script-name">Select or create a script</h3>
+                    <div class="row">
+                        <!-- CODE EDITOR -->
+                        <div class="col-6">
+                            <h4>Code</h4>
                             <textarea id="algo-code"
                                       name="code"
                                       class="form-control"
                                       rows="20"
-                                      placeholder="Write your trading algorithm here..."></textarea>
+                                      placeholder="Write your trading algorithm here..."
+                                      disabled></textarea>
+                            <div class="mt-3">
+                                <button type="button" id="run-button" class="btn btn-primary" disabled>Run</button>
+                                <button type="button" id="save-button" class="btn btn-success" disabled>Save</button>
+                            </div>
                         </div>
-                        <button type="button" id="run-button" class="btn btn-primary mt-3">Run</button>
-                    </form>
-                </div>
-                <!-- RIGHT COLUMN: OUTPUT -->
-                <div class="col-6">
-                    <h3>Output</h3>
-                    <div id="output-container"
-                         class="border rounded p-3"
-                         style="background-color: #f5f5f5;
-                                min-height: 400px;
-                                font-family: monospace;
-                                white-space: pre-wrap;
-                                word-wrap: break-word">
-                        <p class="text-muted">Run code to see output...</p>
-                    </div>
-                    <div id="error-container"
-                         style="display: none"
-                         class="alert alert-danger mt-3">
-                        <strong>Error:</strong>
-                        <p id="error-message"></p>
+                        <!-- OUTPUT -->
+                        <div class="col-6">
+                            <h4>Output</h4>
+                            <div id="output-container"
+                                 class="border rounded p-3"
+                                 style="background-color: #f5f5f5;
+                                        min-height: 400px;
+                                        font-family: monospace;
+                                        white-space: pre-wrap;
+                                        word-wrap: break-word">
+                                <p class="text-muted">Select a script and click Run to see output...</p>
+                            </div>
+                            <div id="error-container"
+                                 style="display: none"
+                                 class="alert alert-danger mt-3">
+                                <strong>Error:</strong>
+                                <p id="error-message"></p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
+        <section>
+            <h2>Scripts Orders</h2>
+            <div class="row">
+                <table class="table">
+                    <thead class="table-success">
+                        <tr>
+                            <th>Side</th>
+                            <th>Game</th>
+                            <th>Quantity</th>
+                            <th>Price</th>
+                            <th>Total Price</th>
+                            <th>Fills</th>
+                            <th>Remaining</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="script-orders">
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </div>
     <script>
+        const API = {
+            orders: "{{ url_for('market.get_script_orders', script_id=0) }}".replace('/0', ''),
+        };
+        let currentScriptId = null;
+        let hasChanges = false;
+
+        function getUrl(endpoint, script_id) {
+            return `${endpoint}/${script_id}`
+        }
+        // Load a script's orders
+        async function loadScriptOrders(scriptId) {
+            try {
+                const response = await fetch(getUrl(API.orders, scriptId));
+                const data = await response.json();
+
+                if (data.success) {
+                    const orders = data.data || [];
+                    document.getElementById('script-orders').innerHTML = orders.length ? orders.map(renderOrderRow).join('') : '<tr><td colspan="9" class="text-muted">No orders.</td></tr>';
+                } else {
+                    document.getElementById('script-orders').innerHTML = '<tr><td colspan="9" class="text-muted">No orders.</td></tr>';
+                }
+            } catch (error) {
+                alert('Error loading orders: ' + error.message);
+            }
+        }
+
+        function renderOrderRow(item) {
+        const price = item.price === null ? 'Market' : `$${item.price}`;
+        const total = item.price === null ? 'Market' : `$${item.price * item.initial_quantity}`;
+        const date = new Date(item.created_at).toLocaleString('en-GB', {
+            day: 'numeric', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        return `
+            <tr>
+                <td><strong>${item.side}</strong></td>
+                <td>${item.game_symbol}</td>
+                <td>${item.initial_quantity}</td>
+                <td>${price}</td>
+                <td>${total}</td>
+                <td>${item.filled_quantity}</td>
+                <td>${item.initial_quantity - item.filled_quantity}</td>
+                <td>${date}</td>
+                <td>${item.status}</td>
+            </tr>
+        `;
+        }
+
+        // Load script when clicked
+        document.querySelectorAll('.script-item').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const scriptId = this.dataset.scriptId;
+                await loadScript(scriptId);
+                await loadScriptOrders(scriptId);
+
+                // Update active state
+                document.querySelectorAll('.script-item').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Load a script
+        async function loadScript(scriptId) {
+            try {
+                const response = await fetch(`/market/algorithmic/scripts/${scriptId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const script = data.script;
+                    currentScriptId = scriptId;
+                    document.getElementById('algo-code').value = script.code;
+                    document.getElementById('current-script-name').textContent = script.name;
+                    document.getElementById('algo-code').disabled = false;
+                    document.getElementById('run-button').disabled = false;
+                    document.getElementById('save-button').disabled = false;
+                    document.getElementById('script-actions').style.display = 'block';
+                    hasChanges = false;
+                    document.getElementById('output-container').textContent = '(ready to run)';
+                    document.getElementById('error-container').style.display = 'none';
+                }
+            } catch (error) {
+                alert('Error loading script: ' + error.message);
+            }
+        }
+
+        // Create new script
+        document.getElementById('new-script-btn').addEventListener('click', async function() {
+            const name = prompt('Script name:', 'New Script');
+            if (name === null) return;
+
+            try {
+                const response = await fetch('{{ url_for("market.create_script_endpoint") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, code: '' })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error creating script: ' + error.message);
+            }
+        });
+
+        // Rename script
+        document.getElementById('rename-script-btn').addEventListener('click', async function() {
+            if (!currentScriptId) return;
+
+            const newName = prompt('New script name:');
+            if (newName === null) return;
+
+            try {
+                const response = await fetch(`/market/algorithmic/scripts/${currentScriptId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: newName, code: document.getElementById('algo-code').value })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('current-script-name').textContent = newName;
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error renaming script: ' + error.message);
+            }
+        });
+
+        // Delete script
+        document.getElementById('delete-script-btn').addEventListener('click', async function() {
+            if (!currentScriptId) return;
+
+            if (!confirm('Are you sure you want to delete this script?')) return;
+
+            try {
+                const response = await fetch(`/market/algorithmic/scripts/${currentScriptId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error deleting script: ' + error.message);
+            }
+        });
+
+        // Track changes
+        document.getElementById('algo-code').addEventListener('input', function() {
+            hasChanges = true;
+        });
+
+        // Save script
+        document.getElementById('save-button').addEventListener('click', async function() {
+            if (!currentScriptId) return;
+
+            const code = document.getElementById('algo-code').value;
+            const name = document.getElementById('current-script-name').textContent;
+
+            try {
+                const response = await fetch(`/market/algorithmic/scripts/${currentScriptId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, code: code })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    hasChanges = false;
+                    <!-- alert('Script saved!'); -->
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error saving script: ' + error.message);
+            }
+        });
+
+        // Run script
         document.getElementById('run-button').addEventListener('click', async function() {
+            if (!currentScriptId) return;
+
             const code = document.getElementById('algo-code').value;
             const outputContainer = document.getElementById('output-container');
             const errorContainer = document.getElementById('error-container');
             const errorMessage = document.getElementById('error-message');
 
-            // Show loading state
             outputContainer.textContent = 'Running...';
             errorContainer.style.display = 'none';
 
             try {
                 const response = await fetch('{{ url_for("market.algorithmic_run") }}', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ code: code })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code, script_id: currentScriptId })
                 });
 
                 const data = await response.json();
 
-                // Always display output if it exists
                 if (data.output) {
                     outputContainer.textContent = data.output;
                 } else {
                     outputContainer.textContent = '(no output)';
                 }
 
-                // Show error separately if it exists
                 if (data.error) {
                     errorMessage.textContent = data.error;
                     errorContainer.style.display = 'block';
@@ -123,5 +363,11 @@
                 errorContainer.style.display = 'block';
             }
         });
+
+        // Load first script if available
+        const firstScript = document.querySelector('.script-item');
+        if (firstScript) {
+            firstScript.click();
+        }
     </script>
 {% endblock %}

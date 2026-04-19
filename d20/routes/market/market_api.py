@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Any, List
 
 from flask import g, jsonify, render_template, request
@@ -37,7 +38,10 @@ class GetPrice(LoxCallable):
 #         return "<native get_price>"
 
 
+@dataclass
 class MarketBuy(LoxCallable):
+    script_id: int
+
     def arity(self):
         # (SYMBOL, quantity)
         return 2
@@ -48,7 +52,7 @@ class MarketBuy(LoxCallable):
         game_id = get_game_id_by_symbol(symbol)
         participant_id = g.market_participant["id"]
         order_id, fills, error = create_order(
-            participant_id, game_id, "MARKET", "BUY", None, quantity
+            participant_id, game_id, "MARKET", "BUY", None, quantity, self.script_id
         )
         return fills
 
@@ -56,7 +60,10 @@ class MarketBuy(LoxCallable):
         return "<native market_buy>"
 
 
+@dataclass
 class MarketSell(LoxCallable):
+    script_id: int
+
     def arity(self):
         # (SYMBOL, quantity)
         return 2
@@ -67,7 +74,7 @@ class MarketSell(LoxCallable):
         game_id = get_game_id_by_symbol(symbol)
         participant_id = g.market_participant["id"]
         order_id, fills, error = create_order(
-            participant_id, game_id, "MARKET", "SELL", None, quantity
+            participant_id, game_id, "MARKET", "SELL", None, quantity, self.script_id
         )
         return fills
 

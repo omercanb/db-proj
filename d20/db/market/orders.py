@@ -28,6 +28,7 @@ def create_order(
     side: Literal["BUY", "SELL"],
     price,
     initial_quantity,
+    script_id=None,
 ):
     """Create a new order and reserve the required cash or inventory.
 
@@ -78,8 +79,8 @@ def create_order(
     game_symbol = get_game(game_id)["symbol"]  # The symbol name that's traded
     cursor = db.execute(
         """insert into Orders
-           (participant_id, game_id, game_symbol, order_type, side, price, initial_quantity, filled_quantity, status, created_at)
-           values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           (participant_id, game_id, game_symbol, order_type, side, price, initial_quantity, filled_quantity, status, created_at, script_id)
+           values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             participant_id,
             game_id,
@@ -91,6 +92,7 @@ def create_order(
             0,
             "OPEN",
             datetime.now().isoformat(),
+            script_id,
         ),
     )
     db.commit()
@@ -237,6 +239,19 @@ def get_orders_by_participant(participant_id):
         .execute(
             "select * from Orders where participant_id = ? order by created_at desc",
             (participant_id,),
+        )
+        .fetchall()
+    )
+
+
+def get_orders_by_script(script_id):
+    """Get all orders for a script, most recent first."""
+    assert script_id != None
+    return (
+        get_db()
+        .execute(
+            "select * from Orders where script_id = ? order by created_at desc",
+            (script_id,),
         )
         .fetchall()
     )
