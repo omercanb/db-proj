@@ -62,21 +62,60 @@ def algorithmic_run():
     return jsonify(result)
 
 
-# @bp.route("/algorithmic/scripts", methods=("POST",))
-# @market_login_required
-# def create_script_endpoint():
-#     """Create a new trading script."""
-#     participant_id = g.market_participant["id"]
-#     data = request.json
-#     name = data.get("name", "Untitled Script")
-#     code = data.get("code", "")
-#
-#     try:
-#         script_id = create_script(participant_id, name, code)
-#         script = get_script(script_id)
-#         return jsonify({"success": True, "script": dict(script)})
-#     except Exception as e:
-#         return jsonify({"success": False, "error": str(e)}), 400
+@bp.route("/algorithmic/scripts", methods=("POST",))
+@market_login_required
+def create_script_endpoint():
+    """Create a new trading script."""
+    participant_id = g.market_participant["id"]
+    data = request.json
+    name = data.get("name", "Untitled Script")
+    code = data.get("code", "")
+
+    try:
+        script_id = create_script(participant_id, name, code)
+        script = get_script(script_id)
+        return jsonify({"success": True, "script": dict(script)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@bp.route("/algorithmic/load/scripts", methods=("GET",))
+@market_login_required
+def algorithmic_load_scripts():
+    """Return the scripts list component."""
+    participant_id = g.market_participant["id"]
+    scripts = get_scripts_by_owner(participant_id)
+    return render_template("market/htmx/_scripts_list.html", scripts=scripts)
+
+
+@bp.route("/algorithmic/load/script/<int:script_id>", methods=("GET",))
+@market_login_required
+def algorithmic_load_script(script_id):
+    """Return the script editor component."""
+    script = get_script(script_id)
+    if not script:
+        return "<p class='text-muted'>Script not found</p>", 404
+
+    if script["owner_id"] != g.market_participant["id"]:
+        return "<p class='text-muted'>Unauthorized</p>", 403
+
+    return render_template(
+        "market/htmx/_script_editor.html",
+        script=script,
+        script_id=script_id,
+    )
+
+
+@bp.route("/algorithmic/load/orders/<int:script_id>", methods=("GET",))
+@market_login_required
+def algorithmic_load_orders(script_id):
+    """Return the orders table component."""
+    script = get_script(script_id)
+    if not script or script["owner_id"] != g.market_participant["id"]:
+        return "", 403
+
+    orders = get_orders_by_script(script_id)
+    return render_template("market/htmx/_orders_table_rows.html", orders=orders)
 
 
 @bp.route("/algorithmic/scripts/<int:script_id>", methods=("GET",))

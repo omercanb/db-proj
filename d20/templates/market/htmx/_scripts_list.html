@@ -2,7 +2,7 @@
     {% for script in scripts %}
         <button type="button"
                 class="list-group-item list-group-item-action script-item"
-                hx-get="/market/algorithmic2/script/{{ script['id'] }}"
+                hx-get="/market/algorithmic/load/script/{{ script['id'] }}"
                 hx-target="#script-editor"
                 hx-swap="innerHTML"
                 hx-on::afterSettle="loadScriptOrders({{ script['id'] }})">{{ script['name'] }}</button>
