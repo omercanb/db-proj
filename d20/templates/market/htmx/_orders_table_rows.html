@@ -1,0 +1,23 @@
+{% if orders %}
+    {% for item in orders %}
+        {% set price = 'Market' if item['price'] == None else ('$' + item['price']|string) %}
+        {% set total = 'Market' if item['price'] == None else ('$' + (item['price'] * item['initial_quantity'])|string) %}
+        <tr>
+            <td>
+                <strong>{{ item['side'] }}</strong>
+            </td>
+            <td>{{ item['game_symbol'] }}</td>
+            <td>{{ item['initial_quantity'] }}</td>
+            <td>{{ 'Market' if item['price'] == None else ('$' + item['price']|string) }}</td>
+            <td>{{ 'Market' if item['price'] == None else ('$' + (item['price'] * item['initial_quantity'])|string) }}</td>
+            <td>{{ item['filled_quantity'] }}</td>
+            <td>{{ item['initial_quantity'] - item['filled_quantity'] }}</td>
+            <td>{{ item['created_at'] }}</td>
+            <td>{{ item['status'] }}</td>
+        </tr>
+    {% endfor %}
+{% else %}
+    <tr>
+        <td colspan="9" class="text-muted">No orders.</td>
+    </tr>
+{% endif %}
