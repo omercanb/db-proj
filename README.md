@@ -36,3 +36,8 @@ flask --app d20 run --debug
 ```
 
 > Debug modda çalıştırınca exceptionlar daha net gözüküyor, yoksa şart değil.
+
+## Kullandığımız stack
+Web frameworkü olarak Flask kullandık
+Stylign (CSS) için Bootstrap diye bir library var
+Bazı gereken dynamic/interaktif yerler için htmx 
