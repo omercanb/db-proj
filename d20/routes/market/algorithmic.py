@@ -1,6 +1,7 @@
 import io
 from contextlib import redirect_stderr, redirect_stdout
 
+import flask
 from flask import g, jsonify, render_template, request
 from plox.runner import LoxRunner
 
@@ -35,6 +36,31 @@ def algorithmic():
     )
 
 
+@bp.route("/algorithmic/run/stream")
+@market_login_required
+def algorithmic_run_stream():
+    """Execute algorithmic trading code and return results as JSON."""
+    code = request.args.get("code", "")
+    script_id = request.args.get("script_id")
+    print("here", script_id)
+    if not script_id:
+        return flask.Response(mimetype="text/event-stream")
+    script = get_script(script_id)
+    update_script(script_id, script["name"], code)
+
+    output, err = run_plox_and_capture(code, script_id)
+    lines = output.splitlines()
+
+    def stream():
+        for line in lines:
+            print(f"event: output\ndata: {line}\n\n")
+            yield f"event: output\ndata: {line}\n\n"
+        print("event: done\ndata:\n\n")
+        yield "event: done\ndata:\n\n"
+
+    return flask.Response(stream(), mimetype="text/event-stream")
+
+
 @bp.route("/algorithmic/run", methods=("POST",))
 @market_login_required
 def algorithmic_run():
@@ -58,7 +84,7 @@ def algorithmic_run():
             "output": output,
             "error": None,
         }
-    print(result)
+    # print(result)
     return jsonify(result)
 
 

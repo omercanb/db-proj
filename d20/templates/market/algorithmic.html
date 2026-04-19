@@ -90,10 +90,25 @@
                                  class="border rounded p-3"
                                  style="background-color: #f5f5f5;
                                         min-height: 400px;
+                                        max-height: 400px;
                                         font-family: monospace;
                                         white-space: pre-wrap;
                                         word-wrap: break-word">
                                 <p class="text-muted">Select a script and click Run to see output...</p>
+                            </div>
+                            <!-- No sse connect on below container because set later dynamically -->
+                            <div id="streaming-output-container"
+                                 sse-swap="output"
+                                 sse-close="done"
+                                 hx-swap="beforeend"
+                                 class="border rounded p-3"
+                                 style="background-color: #f5f5f5;
+                                        min-height: 400px;
+                                        max-height: 400px;
+                                        font-family: monospace;
+                                        white-space: pre-wrap;
+                                        word-wrap: break-word">
+                                <p class="text-muted">Select a script and click Run to hopefully stream output...</p>
                             </div>
                             <div id="error-container"
                                  style="display: none"
@@ -214,6 +229,14 @@
                 errorMessage.textContent = `Network error: ${error.message}`;
                 errorContainer.style.display = 'block';
             });
+            const streamContainer = document.getElementById('streaming-output-container');
+            streamContainer.textContent = "";
+
+            document.getElementById('streaming-output-container').setAttribute(
+                'sse-connect', 
+                `/market/algorithmic/run/stream?script_id=${currentScriptId}&code=${code}`
+            );
+            htmx.process(document.getElementById('streaming-output-container'));
         }
 
         // Save script
