@@ -200,6 +200,8 @@
                 } else {
                     outputContainer.textContent = '(no output)';
                 }
+                // Refresh the script's orders
+                loadScriptOrders(currentScriptId);
 
                 if (data.error) {
                     errorMessage.textContent = data.error;
